@@ -44,7 +44,10 @@ export default function Home() {
     <main className="min-h-screen bg-slate-950 text-white">
       <div className="mx-auto max-w-6xl px-6 py-12">
         <header className="mb-12">
-          <div className="mb-3 text-5xl">♟️</div>
+          <div className="mb-3 text-5xl"><span className="relative inline-flex h-16 w-16 items-start justify-start" aria-label="Läufer und Springer">
+            <span className="absolute left-0 top-0 text-4xl leading-none text-slate-100">♝</span>
+            <span className="absolute bottom-0 right-0 text-4xl leading-none text-slate-300">♞</span>
+          </span></div>
 
           {loading ? (
             <p className="text-lg text-slate-400">Lade Profil...</p>
@@ -85,6 +88,7 @@ export default function Home() {
               </div>
             </>
           )}
+        <Link href="/installieren" className="mt-6 inline-flex rounded-xl border border-slate-700 px-5 py-3 font-semibold text-slate-100 transition hover:bg-slate-800">App installieren</Link>
         </header>
 
         <section>
