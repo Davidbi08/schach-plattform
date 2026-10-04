@@ -49,6 +49,7 @@ export default function InstallierenPage() {
   }
 
   const chromeIntentUrl = "intent://schach-plattform.vercel.app/installieren#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=https%3A%2F%2Fschach-plattform.vercel.app%2Finstallieren;end";
+  const safariIntentUrl = "x-safari-https://schach-plattform.vercel.app/installieren";
 
   return (
     <main className="min-h-screen bg-slate-950 px-6 py-12 text-white">
@@ -72,7 +73,11 @@ export default function InstallierenPage() {
           <details className="mt-7 rounded-xl border border-slate-700 p-4">
             <summary className="cursor-pointer font-semibold">Installationshilfe für mein Gerät</summary>
             <div className="mt-4 space-y-4 text-sm text-slate-300">
-              <p><strong className="text-white">iPhone / iPad:</strong> Seite in Safari öffnen → „Teilen“ → „Zum Home-Bildschirm“ → „Hinzufügen“.</p>
+              <div>
+                <p><strong className="text-white">iPhone / iPad:</strong></p>
+                <a href={safariIntentUrl} className="mt-2 inline-flex rounded-lg bg-white px-4 py-2 font-semibold text-slate-950 hover:bg-slate-200">Seite in Safari öffnen</a>
+                <p className="mt-2">In Safari auf „Teilen“ → „Zum Home-Bildschirm“ → „Hinzufügen“ tippen. Falls der Knopf Safari nicht öffnet, rufe die Website direkt in Safari auf.</p>
+              </div>
               <p><strong className="text-white">Android:</strong> <a href={chromeIntentUrl} className="underline">Seite in Chrome öffnen</a>, dann ⋮ → „App installieren“.</p>
               <p><strong className="text-white">Windows / Mac:</strong> Chrome: ⋮ → „Streamen, speichern und teilen“ → „Seite als App installieren“. Edge: ⋯ → „Apps“ → „Diese Website als App installieren“.</p>
             </div>
