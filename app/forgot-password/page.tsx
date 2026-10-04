@@ -14,7 +14,7 @@ export default function ForgotPasswordPage() {
     setMessage("");
     try {
       const { error } = await createClient().auth.resetPasswordForEmail(email, {
-        redirectTo: window.location.origin + "/auth/callback?next=/update-password",
+                redirectTo: window.location.origin + "/auth/callback",
       });
       if (error) throw error;
       setMessage("Wenn ein Konto mit dieser E-Mail existiert, erhältst du in Kürze eine E-Mail mit dem Link zum Zurücksetzen.");
