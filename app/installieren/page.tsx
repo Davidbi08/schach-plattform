@@ -1,0 +1,87 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useState } from "react";
+
+type InstallPromptEvent = Event & {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+};
+
+export default function InstallierenPage() {
+  const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
+  const [installed, setInstalled] = useState(false);
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    const isStandalone = window.matchMedia("(display-mode: standalone)").matches ||
+      ("standalone" in window.navigator && Boolean((window.navigator as Navigator & { standalone?: boolean }).standalone));
+    setInstalled(isStandalone);
+
+    const handleBeforeInstall = (event: Event) => {
+      event.preventDefault();
+      setInstallPrompt(event as InstallPromptEvent);
+    };
+    window.addEventListener("beforeinstallprompt", handleBeforeInstall);
+    return () => window.removeEventListener("beforeinstallprompt", handleBeforeInstall);
+  }, []);
+
+  async function installApp() {
+    if (!installPrompt) return;
+    await installPrompt.prompt();
+    const result = await installPrompt.userChoice;
+    setMessage(result.outcome === "accepted" ? "Die App wird hinzugefügt." : "Du kannst die Installation jederzeit später starten.");
+    setInstallPrompt(null);
+  }
+
+  return (
+    <main className="min-h-screen bg-slate-950 px-6 py-12 text-white">
+      <div className="mx-auto max-w-3xl">
+        <Link href="/" className="text-sm text-slate-300 underline underline-offset-4 hover:text-white">← Zur Startseite</Link>
+        <div className="mt-10 rounded-3xl border border-slate-800 bg-slate-900 p-8 sm:p-10">
+          <div className="mb-6 flex h-16 w-16 items-start justify-start relative" aria-label="Läufer und Springer">
+            <span className="absolute left-0 top-0 text-4xl leading-none text-slate-100">♝</span>
+            <span className="absolute bottom-0 right-0 text-4xl leading-none text-slate-300">♞</span>
+          </div>
+          <h1 className="text-3xl font-bold sm:text-4xl">Schach auf deinem Gerät</h1>
+          <p className="mt-4 text-slate-300">Füge die Schachplattform zum Startbildschirm oder Desktop hinzu. Sie öffnet sich dann wie eine App in einem eigenen Fenster.</p>
+
+          <div className="mt-7">
+            {installed ? (
+              <p className="rounded-xl bg-slate-800 px-5 py-4 text-slate-100">Die App ist auf diesem Gerät bereits installiert.</p>
+            ) : installPrompt ? (
+              <button onClick={installApp} className="rounded-xl bg-white px-5 py-3 font-semibold text-slate-950 hover:bg-slate-200">Jetzt installieren</button>
+            ) : (
+              <p className="rounded-xl bg-slate-800 px-5 py-4 text-slate-200">Nutze die Anleitung unten: Dein Browser zeigt den Installieren-Befehl im Menü an.</p>
+            )}
+            {message && <p className="mt-3 text-sm text-slate-300" role="status">{message}</p>}
+          </div>
+
+          <div className="mt-9 grid gap-5 sm:grid-cols-2">
+            <section className="rounded-2xl border border-slate-700 p-5">
+              <h2 className="text-lg font-semibold">iPhone oder iPad</h2>
+              <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-slate-300">
+                <li>Öffne diese Seite in Safari.</li>
+                <li>Tippe auf „Teilen“ (Quadrat mit Pfeil nach oben).</li>
+                <li>Wähle „Zum Home-Bildschirm“ und dann „Hinzufügen“.</li>
+              </ol>
+            </section>
+            <section className="rounded-2xl border border-slate-700 p-5">
+              <h2 className="text-lg font-semibold">Android</h2>
+              <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-slate-300">
+                <li>Öffne diese Seite in Chrome.</li>
+                <li>Tippe oben rechts auf ⋮.</li>
+                <li>Wähle „App installieren“ oder „Zum Startbildschirm hinzufügen“.</li>
+              </ol>
+            </section>
+            <section className="rounded-2xl border border-slate-700 p-5 sm:col-span-2">
+              <h2 className="text-lg font-semibold">Windows oder Mac</h2>
+              <p className="mt-3 text-sm text-slate-300">Öffne die Seite in Chrome oder Edge. Klicke auf das Installieren-Symbol rechts in der Adresszeile oder öffne das Browsermenü und wähle „App installieren“.</p>
+            </section>
+          </div>
+          <p className="mt-7 text-xs text-slate-400">Die Installation ist kostenlos. Du kannst die App später wie andere Apps von deinem Gerät entfernen.</p>
+        </div>
+      </div>
+    </main>
+  );
+}
