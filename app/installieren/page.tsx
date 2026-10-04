@@ -80,7 +80,7 @@ export default function InstallierenPage() {
                 <li>Tippe auf „Teilen“ (Quadrat mit Pfeil nach oben).</li>
                 <li>Wähle „Zum Home-Bildschirm“ und dann „Hinzufügen“.</li>
               </ol>
-              <button type="button" onClick={refreshApp} className={updateClass}>App in Safari aktualisieren</button>
+              <button type="button" onClick={refreshApp} className={updateClass}>In diesem App-Fenster neu laden</button>
             </section>
             <section id="android" className="scroll-mt-6 rounded-2xl border border-slate-700 p-5">
               <h2 className="text-lg font-semibold">Android</h2>
@@ -89,15 +89,15 @@ export default function InstallierenPage() {
                 <li>Tippe oben rechts auf ⋮.</li>
                 <li>Wähle „App installieren“ oder „Zum Startbildschirm hinzufügen“.</li>
               </ol>
-              <button type="button" onClick={refreshApp} className={updateClass}>App in Chrome aktualisieren</button>
+              <button type="button" onClick={refreshApp} className={updateClass}>In diesem App-Fenster neu laden</button>
             </section>
             <section id="computer" className="scroll-mt-6 rounded-2xl border border-slate-700 p-5 sm:col-span-2">
               <h2 className="text-lg font-semibold">Windows oder Mac</h2>
               <p className="mt-3 text-sm text-slate-300">Öffne die Seite in Chrome oder Edge. Klicke auf das Installieren-Symbol rechts in der Adresszeile oder öffne das Browsermenü und wähle „App installieren“.</p>
-              <button type="button" onClick={refreshApp} className={updateClass}>App auf PC / Mac aktualisieren</button>
+              <button type="button" onClick={refreshApp} className={updateClass}>In diesem App-Fenster neu laden</button>
             </section>
           </div>
-          <p className="mt-7 text-xs text-slate-400">Die Aktualisieren-Schaltfläche lädt die Startseite in diesem Fenster neu. Sie benötigt eine Internetverbindung. Du kannst die App später wie andere Apps von deinem Gerät entfernen.</p>
+          <p className="mt-7 text-xs text-slate-400">Der Button lädt die Startseite in diesem App-Fenster neu. Eine Browserleiste wird dabei nicht eingeblendet; das App-Symbol aktualisiert sich separat. Dafür brauchst du eine Internetverbindung. Du kannst die App später wie andere Apps von deinem Gerät entfernen.</p>
         </div>
       </div>
     </main>
