@@ -34,7 +34,12 @@ export default function InstallierenPage() {
     setInstallPrompt(null);
   }
 
+  function refreshApp() {
+    window.location.assign("/?refresh=" + Date.now());
+  }
+
   const choiceClass = "rounded-xl border border-slate-600 px-4 py-3 text-center font-semibold text-slate-100 transition hover:border-slate-400 hover:bg-slate-800";
+  const updateClass = "mt-3 rounded-lg border border-slate-500 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:border-slate-300 hover:bg-slate-800";
   const chromeIntentUrl = "intent://schach-plattform.vercel.app/installieren#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=https%3A%2F%2Fschach-plattform.vercel.app%2Finstallieren%23android;end";
 
   return (
@@ -75,6 +80,7 @@ export default function InstallierenPage() {
                 <li>Tippe auf „Teilen“ (Quadrat mit Pfeil nach oben).</li>
                 <li>Wähle „Zum Home-Bildschirm“ und dann „Hinzufügen“.</li>
               </ol>
+              <button type="button" onClick={refreshApp} className={updateClass}>App in Safari aktualisieren</button>
             </section>
             <section id="android" className="scroll-mt-6 rounded-2xl border border-slate-700 p-5">
               <h2 className="text-lg font-semibold">Android</h2>
@@ -83,13 +89,15 @@ export default function InstallierenPage() {
                 <li>Tippe oben rechts auf ⋮.</li>
                 <li>Wähle „App installieren“ oder „Zum Startbildschirm hinzufügen“.</li>
               </ol>
+              <button type="button" onClick={refreshApp} className={updateClass}>App in Chrome aktualisieren</button>
             </section>
             <section id="computer" className="scroll-mt-6 rounded-2xl border border-slate-700 p-5 sm:col-span-2">
               <h2 className="text-lg font-semibold">Windows oder Mac</h2>
               <p className="mt-3 text-sm text-slate-300">Öffne die Seite in Chrome oder Edge. Klicke auf das Installieren-Symbol rechts in der Adresszeile oder öffne das Browsermenü und wähle „App installieren“.</p>
+              <button type="button" onClick={refreshApp} className={updateClass}>App auf PC / Mac aktualisieren</button>
             </section>
           </div>
-          <p className="mt-7 text-xs text-slate-400">Die Installation ist kostenlos. Du kannst die App später wie andere Apps von deinem Gerät entfernen.</p>
+          <p className="mt-7 text-xs text-slate-400">Die Aktualisieren-Schaltfläche lädt die Startseite in diesem Fenster neu. Sie benötigt eine Internetverbindung. Du kannst die App später wie andere Apps von deinem Gerät entfernen.</p>
         </div>
       </div>
     </main>
