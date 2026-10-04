@@ -35,6 +35,7 @@ export default function InstallierenPage() {
   }
 
   const choiceClass = "rounded-xl border border-slate-600 px-4 py-3 text-center font-semibold text-slate-100 transition hover:border-slate-400 hover:bg-slate-800";
+  const chromeIntentUrl = "intent://schach-plattform.vercel.app/installieren#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=https%3A%2F%2Fschach-plattform.vercel.app%2Finstallieren%23android;end";
 
   return (
     <main className="min-h-screen bg-slate-950 px-6 py-12 text-white">
@@ -68,6 +69,7 @@ export default function InstallierenPage() {
           <div className="mt-9 grid gap-5 sm:grid-cols-2">
             <section id="iphone" className="scroll-mt-6 rounded-2xl border border-slate-700 p-5">
               <h2 className="text-lg font-semibold">iPhone oder iPad</h2>
+              <p className="mt-3 text-sm text-slate-300">Die Installation funktioniert in Safari. Wenn diese Seite gerade in einem anderen Browser geöffnet ist, tippe dort auf „Teilen“ und wähle „In Safari öffnen“, falls diese Option angezeigt wird. Eine Website kann Safari nicht selbst erzwingen.</p>
               <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-slate-300">
                 <li>Öffne diese Seite in Safari.</li>
                 <li>Tippe auf „Teilen“ (Quadrat mit Pfeil nach oben).</li>
@@ -76,8 +78,8 @@ export default function InstallierenPage() {
             </section>
             <section id="android" className="scroll-mt-6 rounded-2xl border border-slate-700 p-5">
               <h2 className="text-lg font-semibold">Android</h2>
+              <a href={chromeIntentUrl} className="mt-3 inline-flex rounded-lg bg-white px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-slate-200">Seite in Chrome öffnen</a>
               <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-slate-300">
-                <li>Öffne diese Seite in Chrome.</li>
                 <li>Tippe oben rechts auf ⋮.</li>
                 <li>Wähle „App installieren“ oder „Zum Startbildschirm hinzufügen“.</li>
               </ol>
