@@ -52,6 +52,7 @@ export default function InstallierenPage() {
 
   const chromeIntentUrl = "intent://schach-plattform.vercel.app/installieren#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=https%3A%2F%2Fschach-plattform.vercel.app%2Finstallieren;end";
   const safariIntentUrl = "x-safari-https://schach-plattform.vercel.app/installieren";
+  const edgeIntentUrl = "microsoft-edge:https://schach-plattform.vercel.app/installieren";
   const installPageUrl = "https://schach-plattform.vercel.app/installieren";
 
   return (
@@ -85,10 +86,14 @@ export default function InstallierenPage() {
                 <p className="mt-2">In Chrome auf „App installieren“ tippen.</p>
               </div>
               <div>
-                <p><strong className="text-white">Windows / Mac</strong></p>
+                <p><strong className="text-white">Windows</strong></p>
+                <a href={edgeIntentUrl} className={buttonClass}>In Microsoft Edge öffnen</a>
+                <p className="mt-2">Falls Firefox fragt, ob Edge geöffnet werden darf: bestätigen. Danach in Edge ⋯ → Apps → „Diese Website als App installieren“ wählen.</p>
+              </div>
+              <div>
+                <p><strong className="text-white">Mac</strong></p>
                 <a href={installPageUrl} target="_blank" rel="noreferrer" className={buttonClass}>Website im Browser öffnen</a>
-                <p className="mt-2">Chrome oder Edge: oben rechts auf das Installieren-Symbol klicken. Falls es fehlt: Menü ⋮ → „App installieren“.</p>
-                <p className="mt-1">Mac mit Safari: Menü „Ablage“ → „Zum Dock hinzufügen“.</p>
+                <p className="mt-2">In Safari: Menü „Ablage“ → „Zum Dock hinzufügen“.</p>
               </div>
             </div>
           </details>
