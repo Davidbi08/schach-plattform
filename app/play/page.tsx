@@ -128,7 +128,11 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-slate-950 text-white">
-      <div className="mx-auto flex min-h-screen max-w-6xl flex-col items-center px-4 py-10">
+      <div className="mx-auto flex min-h-screen max-w-6xl flex-col items-center px-4 py-10">        <div className="mb-6 w-full max-w-2xl">
+          <a href="/" className="text-sm text-slate-300 underline underline-offset-4 hover:text-white">← Zur Startseite</a>
+        </div>
+
+
         <div className="mb-6 text-center">
           <div className="mb-2 text-5xl">♟️</div>
 
