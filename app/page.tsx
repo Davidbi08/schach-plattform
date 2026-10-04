@@ -10,31 +10,34 @@ export default function Home() {
 
   useEffect(() => {
     async function loadProfile() {
-      const supabase = createClient();
+      try {
+        const supabase = createClient();
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
 
-      if (!user) {
+        if (!user) {
+          return;
+        }
+
+        const { data } = await supabase
+          .from("profiles")
+          .select("username")
+          .eq("id", user.id)
+          .single();
+
+        if (data) {
+          setUsername(data.username);
+        }
+      } catch (error) {
+        console.error("Profil konnte nicht geladen werden:", error);
+      } finally {
         setLoading(false);
-        return;
       }
-
-      const { data } = await supabase
-        .from("profiles")
-        .select("username")
-        .eq("id", user.id)
-        .single();
-
-      if (data) {
-        setUsername(data.username);
-      }
-
-      setLoading(false);
     }
 
-    loadProfile();
+    void loadProfile();
   }, []);
 
   return (
