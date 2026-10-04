@@ -88,7 +88,7 @@ export default function InstallierenPage() {
               <div>
                 <p><strong className="text-white">Windows</strong></p>
                 <a href={edgeIntentUrl} className={buttonClass}>In Microsoft Edge öffnen</a>
-                <p className="mt-2">Falls Firefox fragt, ob Edge geöffnet werden darf: bestätigen. Danach in Edge ⋯ → Apps → „Diese Website als App installieren“ wählen.</p>
+                <p className="mt-2">Falls Firefox fragt, ob Edge geöffnet werden darf: bestätigen. Danach in Edge ⋯ → Weitere Tools → Apps → „Diese Website als App installieren“ wählen.</p>
               </div>
               <div>
                 <p><strong className="text-white">Mac</strong></p>
