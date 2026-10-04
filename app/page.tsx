@@ -88,7 +88,7 @@ export default function Home() {
               </div>
             </>
           )}
-        <Link href="/installieren" className="mt-6 inline-flex rounded-xl border border-slate-700 px-5 py-3 font-semibold text-slate-100 transition hover:bg-slate-800">App installieren</Link>
+        <Link href="/installieren" className="mt-6 ml-auto flex w-fit rounded-xl border border-slate-700 px-5 py-3 font-semibold text-slate-100 transition hover:bg-slate-800">App installieren</Link>
         </header>
 
         <section>
