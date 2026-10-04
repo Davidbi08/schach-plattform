@@ -8,6 +8,8 @@ type InstallPromptEvent = Event & {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 };
 
+const buttonClass = "mt-3 inline-flex rounded-lg bg-white px-4 py-2 font-semibold text-slate-950 hover:bg-slate-200";
+
 export default function InstallierenPage() {
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
   const [installed, setInstalled] = useState(false);
@@ -50,6 +52,7 @@ export default function InstallierenPage() {
 
   const chromeIntentUrl = "intent://schach-plattform.vercel.app/installieren#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=https%3A%2F%2Fschach-plattform.vercel.app%2Finstallieren;end";
   const safariIntentUrl = "x-safari-https://schach-plattform.vercel.app/installieren";
+  const installPageUrl = "https://schach-plattform.vercel.app/installieren";
 
   return (
     <main className="min-h-screen bg-slate-950 px-6 py-12 text-white">
@@ -61,25 +64,32 @@ export default function InstallierenPage() {
             <span className="absolute bottom-0 right-0 text-4xl leading-none text-slate-300">♞</span>
           </div>
           <h1 className="text-3xl font-bold sm:text-4xl">Schachplattform installieren</h1>
-          <p className="mt-3 text-slate-300">Einmal tippen, kurz bestätigen, fertig.</p>
+          <p className="mt-3 text-slate-300">Wähle dein Gerät und folge den kurzen Schritten.</p>
           {installed ? (
             <p className="mt-6 rounded-xl bg-emerald-900/60 px-5 py-4 font-semibold text-emerald-100" role="status">Bereits installiert ✓</p>
           ) : installPrompt ? (
             <button type="button" onClick={installApp} className="mt-6 w-full rounded-xl bg-white px-5 py-4 text-lg font-bold text-slate-950 hover:bg-slate-200">Jetzt installieren</button>
-          ) : (
-            <p className="mt-6 rounded-xl bg-slate-800 px-5 py-4 text-slate-200">iPhone/iPad: in Safari auf „Teilen“ → „Zum Home-Bildschirm“. Android/Windows: Chrome oder Edge öffnen und „App installieren“ wählen.</p>
-          )}
+          ) : null}
           {message && <p className="mt-4 text-sm text-emerald-200" role="status">{message}</p>}
-          <details className="mt-7 rounded-xl border border-slate-700 p-4">
-            <summary className="cursor-pointer font-semibold">Installationshilfe für mein Gerät</summary>
-            <div className="mt-4 space-y-4 text-sm text-slate-300">
+          <details open className="mt-7 rounded-xl border border-slate-700 p-4">
+            <summary className="cursor-pointer font-semibold">Installation auf Handy oder Computer</summary>
+            <div className="mt-4 space-y-5 text-sm text-slate-300">
               <div>
-                <p><strong className="text-white">iPhone / iPad:</strong></p>
-                <a href={safariIntentUrl} className="mt-2 inline-flex rounded-lg bg-white px-4 py-2 font-semibold text-slate-950 hover:bg-slate-200">Seite in Safari öffnen</a>
-                <p className="mt-2">In Safari auf „Teilen“ → „Zum Home-Bildschirm“ → „Hinzufügen“ tippen. Falls der Knopf Safari nicht öffnet, rufe die Website direkt in Safari auf.</p>
+                <p><strong className="text-white">iPhone / iPad</strong></p>
+                <a href={safariIntentUrl} className={buttonClass}>Safari öffnen</a>
+                <p className="mt-2">In Safari: „Teilen“ → „Zum Home-Bildschirm“ → „Hinzufügen“.</p>
               </div>
-              <p><strong className="text-white">Android:</strong> <a href={chromeIntentUrl} className="underline">Seite in Chrome öffnen</a>, dann ⋮ → „App installieren“.</p>
-              <p><strong className="text-white">Windows / Mac:</strong> Chrome: ⋮ → „Streamen, speichern und teilen“ → „Seite als App installieren“. Edge: ⋯ → „Apps“ → „Diese Website als App installieren“.</p>
+              <div>
+                <p><strong className="text-white">Android</strong></p>
+                <a href={chromeIntentUrl} className={buttonClass}>Chrome öffnen</a>
+                <p className="mt-2">In Chrome auf „App installieren“ tippen.</p>
+              </div>
+              <div>
+                <p><strong className="text-white">Windows / Mac</strong></p>
+                <a href={installPageUrl} target="_blank" rel="noreferrer" className={buttonClass}>Website im Browser öffnen</a>
+                <p className="mt-2">Chrome oder Edge: oben rechts auf das Installieren-Symbol klicken. Falls es fehlt: Menü ⋮ → „App installieren“.</p>
+                <p className="mt-1">Mac mit Safari: Menü „Ablage“ → „Zum Dock hinzufügen“.</p>
+              </div>
             </div>
           </details>
           <p className="mt-6 text-xs text-slate-400">Website-Änderungen sind beim nächsten Öffnen verfügbar. Das App-Symbol aktualisiert dein Gerät separat.</p>
