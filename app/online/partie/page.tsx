@@ -8,9 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { ChessPieceIcon } from "@/components/chess-piece";
 import { describeMaterialAdvantage, getMaterialAdvantage } from "@/lib/chess/material";
 import { formatClock } from "../protocol";
-import { saveOnlineGame, type SavedMove } from "../history-store";
-
-type MatchConfig = { room: string; player: string; opponent: string; white: boolean; initialSeconds: number; incrementSeconds: number };
+import { saveOnlineGame, type SavedMove } from "../history-store";type MatchConfig = { room: string; player: string; opponent: string; white: boolean; initialSeconds: number; incrementSeconds: number; whiteName: string; blackName: string };
 type ClockState = { whiteMs: number; blackMs: number; lastTick: number };
 type MovePayload = { from: string; to: string; promotion?: string; by: string; whiteMs: number; blackMs: number };
 type MatchEnd = { result: "1-0" | "0-1" | "1/2-1/2"; reason: string };
@@ -63,6 +61,9 @@ export default function OnlineGamePage() {
     const white = params.get("white") === "true";
     const initialSeconds = Number(params.get("initial"));
     const incrementSeconds = Number(params.get("increment"));
+    const safeName = (value: string | null) => value?.trim().slice(0, 20) || "Gast";
+    const whiteName = safeName(params.get("whiteName"));
+    const blackName = safeName(params.get("blackName"));
     const expectedRoom = [player, opponent].sort().join("_");
 
     if (!player || !opponent || !room || room !== expectedRoom || !Number.isFinite(initialSeconds) || initialSeconds < 30 || !Number.isFinite(incrementSeconds) || incrementSeconds < 0 || incrementSeconds > 60) {
@@ -70,7 +71,7 @@ export default function OnlineGamePage() {
       return;
     }
 
-    const matchConfig = { room, player, opponent, white, initialSeconds, incrementSeconds };
+    const matchConfig = { room, player, opponent, white, initialSeconds, incrementSeconds, whiteName, blackName };
     setConfig(matchConfig);
     gameRef.current = new Chess();
     setGame(gameRef.current);
@@ -93,6 +94,8 @@ export default function OnlineGamePage() {
       playedAt: new Date().toISOString(),
       timeControl: `${Math.floor(match.initialSeconds / 60)}+${match.incrementSeconds}`,
       color: myColor,
+      whiteName: match.whiteName,
+      blackName: match.blackName,
       result,
       resultText: result === "win" ? "Gewonnen" : result === "loss" ? "Verloren" : "Remis",
       reason: end.reason,
@@ -380,7 +383,7 @@ export default function OnlineGamePage() {
         <div className="mx-auto flex max-w-4xl flex-col gap-4 lg:flex-row lg:items-start">
           <section className="min-w-0 flex-1" aria-label="Schachpartie">
             <div className="mb-3 flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900 px-4 py-3">
-              <span className="font-semibold">{config.white ? "Gegner · Schwarz" : "Du · Schwarz"}</span>
+              <span className="font-semibold">{config.white ? `Gegner · ${config.blackName}` : `Du · ${config.blackName}`}</span>
               <span className={"rounded-lg px-3 py-1.5 font-mono text-xl font-bold tabular-nums " + (game.turn() === "b" && started && !finished ? "bg-emerald-400 text-slate-950" : "bg-slate-800 text-white")}>{blackClock}</span>
             </div>
 
@@ -405,7 +408,7 @@ export default function OnlineGamePage() {
             </div>
 
             <div className="mt-3 flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900 px-4 py-3">
-              <span className="font-semibold">{config.white ? "Du · Weiß" : "Gegner · Weiß"}</span>
+              <span className="font-semibold">{config.white ? `Du · ${config.whiteName}` : `Gegner · ${config.whiteName}`}</span>
               <span className={"rounded-lg px-3 py-1.5 font-mono text-xl font-bold tabular-nums " + (game.turn() === "w" && started && !finished ? "bg-emerald-400 text-slate-950" : "bg-slate-800 text-white")}>{whiteClock}</span>
             </div>
           </section>
@@ -416,7 +419,7 @@ export default function OnlineGamePage() {
               <span className={`text-2xl font-bold tabular-nums ${material.ahead ? "text-emerald-300" : material.score === "0" ? "text-slate-200" : "text-rose-300"}`}>{material.score}</span>
             </section>
             <section className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
-              <div className="flex items-center gap-3"><span className={"h-2.5 w-2.5 rounded-full " + (opponentOnline ? "bg-emerald-400" : "bg-amber-400")} /><div><h2 className="font-semibold">Dein Gegner</h2><p className="text-sm text-slate-400">{opponentOnline ? "Verbunden" : "Verbindung wird hergestellt"}</p></div></div>
+              <div className="flex items-center gap-3"><span className={"h-2.5 w-2.5 rounded-full " + (opponentOnline ? "bg-emerald-400" : "bg-amber-400")} /><div><h2 className="font-semibold">{config.white ? config.blackName : config.whiteName}</h2><p className="text-sm text-slate-400">{opponentOnline ? "Verbunden" : "Verbindung wird hergestellt"}</p></div></div>
               <p className="mt-4 border-t border-slate-800 pt-3 text-sm text-slate-400">Bedenkzeit: {config.initialSeconds === 0 ? "ohne Uhr" : `${Math.floor(config.initialSeconds / 60)}+${config.incrementSeconds}`}</p>
             </section>
 
