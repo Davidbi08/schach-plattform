@@ -61,7 +61,9 @@ export default function OnlinePage() {
           .flat()
           .map((presence) => presence as unknown as LobbyPlayer)
           .filter((presence) => typeof presence.playerId === "string" && typeof presence.queuedAt === "number")
-          .filter((presence) => Date.now() - presence.queuedAt < 120_000)
+          // Do not expire players using this browser's clock. Realtime presence
+          // already drops disconnected clients, while client clocks can differ
+          // and otherwise make each browser see a different queue.
           .sort((first, second) => first.queuedAt - second.queuedAt || first.playerId.localeCompare(second.playerId));
 
         setQueueCount(Math.max(1, allPlayers.length));
