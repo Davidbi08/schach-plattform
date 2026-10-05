@@ -24,6 +24,7 @@ export default function Home() {
   const [incrementSeconds, setIncrementSeconds] = useState(0);
   const [moves, setMoves] = useState<string[]>([]);
   const [botElo, setBotElo] = useState<number | null>(null);
+  const [botColor, setBotColor] = useState<'w' | 'b'>('b');
   const [botThinking, setBotThinking] = useState(false);
   const [engineReady, setEngineReady] = useState(false);
   const [engineError, setEngineError] = useState('');
@@ -33,14 +34,19 @@ export default function Home() {
   const pendingGameRef = useRef<Chess | null>(null);
   const gameGenerationRef = useRef(0);
   const pendingGenerationRef = useRef<number | null>(null);
-  const botDelayRef = useRef<number | null>(null);
-  const board = game.board();
+  const isFlipped = botElo !== null && botColor === 'w';
+  const boardRows = game.board();
+  const board = isFlipped ? boardRows.slice().reverse().map((row) => row.slice().reverse()) : boardRows;
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('mode') === 'bot') {
       const elo = Number(params.get('elo'));
       if ([500, 1000, 1500, 2000, 2500].includes(elo)) setBotElo(elo);
+      const color = params.get('color');
+      if (color === 'black') setBotColor('w');
+      else if (color === 'random') setBotColor(Math.random() < 0.5 ? 'w' : 'b');
+      else setBotColor('b');
       const minutes = Number(params.get('time'));
       const increment = Number(params.get('increment'));
       if ([0, 1, 3, 5, 10, 15, 30].includes(minutes)) {
@@ -84,8 +90,9 @@ export default function Home() {
               });
               setMoves((oldMoves) => [...oldMoves, move.san]);
               const nextGame = new Chess(current.fen());
-              if (clockMinutes > 0 && incrementSeconds > 0 && move.color === 'b') {
-                setBlackTime((time) => time + incrementSeconds);
+              if (clockMinutes > 0 && incrementSeconds > 0) {
+                if (move.color === 'w') setWhiteTime((time) => time + incrementSeconds);
+                else setBlackTime((time) => time + incrementSeconds);
               }
               setGame(nextGame);
             } catch {
@@ -106,13 +113,11 @@ export default function Home() {
       setEngineError('Dein Browser konnte den Bot nicht starten. Bitte lade die Seite neu.');
     }
     return () => {
-      if (botDelayRef.current !== null) window.clearTimeout(botDelayRef.current);
-      botDelayRef.current = null;
       readyRef.current = false;
       workerRef.current = null;
       worker.terminate();
     };
-  }, [botElo, clockMinutes, incrementSeconds]);
+  }, [botElo, botColor, clockMinutes, incrementSeconds]);
 
   useEffect(() => {
     if (clockMinutes === 0) return;
@@ -125,7 +130,7 @@ export default function Home() {
   }, [game, clockMinutes]);
 
   useEffect(() => {
-    if (botElo === null || game.turn() !== 'b' || game.isGameOver() || (clockMinutes > 0 && (whiteTime === 0 || blackTime === 0))) return;
+    if (botElo === null || game.turn() !== botColor || game.isGameOver() || (clockMinutes > 0 && (whiteTime === 0 || blackTime === 0))) return;
     if (!readyRef.current || !workerRef.current) return;
     const fen = game.fen();
     if (requestedFenRef.current === fen) return;
@@ -137,20 +142,16 @@ export default function Home() {
     const engine = workerRef.current;
     const targetElo = Math.max(1320, botElo);
     const depth = botElo === 500 ? 1 : botElo === 1000 ? 4 : botElo === 1500 ? 8 : botElo === 2000 ? 9 : 10;
-    const thinkDelay = 800 + Math.floor(Math.random() * 900);
-    botDelayRef.current = window.setTimeout(() => {
-      botDelayRef.current = null;
-      if (pendingGenerationRef.current !== gameGenerationRef.current) return;
-      engine.postMessage('setoption name UCI_LimitStrength value true');
-      engine.postMessage('setoption name UCI_Elo value ' + targetElo);
-      engine.postMessage('position fen ' + fen);
-      engine.postMessage('go depth ' + depth);
-    }, thinkDelay);
-  }, [game, botElo, whiteTime, blackTime, engineReady]);
+    if (pendingGenerationRef.current !== gameGenerationRef.current) return;
+    engine.postMessage('setoption name UCI_LimitStrength value true');
+    engine.postMessage('setoption name UCI_Elo value ' + targetElo);
+    engine.postMessage('position fen ' + fen);
+    engine.postMessage('go depth ' + depth);
+  }, [game, botElo, botColor, whiteTime, blackTime, engineReady]);
 
   function handleSquareClick(square: string) {
     if (game.isGameOver() || (clockMinutes > 0 && (whiteTime === 0 || blackTime === 0)) || botThinking) return;
-    if (botElo !== null && game.turn() === 'b') return;
+    if (botElo !== null && game.turn() === botColor) return;
     const piece = game.get(square as never);
     if (selectedSquare) {
       try {
@@ -181,8 +182,6 @@ export default function Home() {
 
   function newGame() {
     gameGenerationRef.current += 1;
-    if (botDelayRef.current !== null) window.clearTimeout(botDelayRef.current);
-    botDelayRef.current = null;
     requestedFenRef.current = null;
     pendingGenerationRef.current = null;
     pendingGameRef.current = null;
@@ -197,10 +196,13 @@ export default function Home() {
     setEngineError('');
   }
 
-  const currentPlayer = game.turn() === 'w' ? 'Weiß' : botElo !== null ? 'Bot' : 'Schwarz';
+  const userColor = botColor === 'w' ? 'b' : 'w';
+  const currentPlayer = botElo !== null
+    ? game.turn() === botColor ? 'Bot' : 'Du (' + (userColor === 'w' ? 'Weiß' : 'Schwarz') + ')'
+    : game.turn() === 'w' ? 'Weiß' : 'Schwarz';
   let status = 'Am Zug: ' + currentPlayer;
-  if (clockMinutes > 0 && whiteTime === 0) status = '⏱️ Zeit abgelaufen – Schwarz gewinnt.';
-  else if (clockMinutes > 0 && blackTime === 0) status = '⏱️ Zeit abgelaufen – Weiß gewinnt.';
+  if (clockMinutes > 0 && whiteTime === 0) status = '⏱️ Zeit abgelaufen – ' + (botElo !== null ? (botColor === 'b' ? 'Bot' : 'Du') : 'Schwarz') + ' gewinnt.';
+  else if (clockMinutes > 0 && blackTime === 0) status = '⏱️ Zeit abgelaufen – ' + (botElo !== null ? (botColor === 'w' ? 'Bot' : 'Du') : 'Weiß') + ' gewinnt.';
   else if (game.isCheckmate()) status = '♚ Schachmatt! ' + (game.turn() === 'w' ? 'Schwarz' : 'Weiß') + ' gewinnt.';
   else if (game.isStalemate()) status = '🤝 Patt – Unentschieden.';
   else if (game.isDraw()) status = '🤝 Remis – Unentschieden.';
@@ -212,7 +214,7 @@ export default function Home() {
       <div className="mx-auto flex min-h-screen max-w-6xl flex-col items-center px-4 py-10">
         <div className="mb-6 w-full max-w-2xl">
           <a href="/" className="text-sm text-slate-300 underline underline-offset-4 hover:text-white">← Zur Startseite</a>
-          {botElo !== null && <p className="mt-3 text-sm text-emerald-300">Spiel gegen den {botElo}-Elo-Bot · Stockfish 19 · {clockMinutes === 0 ? 'ohne Zeit' : clockMinutes + '+' + incrementSeconds}</p>}
+          {botElo !== null && <p className="mt-3 text-sm text-emerald-300">Spiel gegen den {botElo}-Elo-Bot · Du spielst {userColor === 'w' ? 'Weiß' : 'Schwarz'} · {clockMinutes === 0 ? 'ohne Zeit' : clockMinutes + '+' + incrementSeconds}</p>}
         </div>
         <div className="mb-6 text-center">
           <div className="mb-2 text-5xl">♟️</div>
@@ -223,18 +225,20 @@ export default function Home() {
         {engineError && <p role="alert" className="mb-4 max-w-2xl rounded-xl border border-red-800 bg-red-950/50 px-4 py-3 text-sm text-red-200">{engineError}</p>}
         {botElo !== null && !engineReady && !engineError && <p className="mb-4 text-sm text-slate-400">Bot wird geladen …</p>}
         <div className="mb-4 flex w-full max-w-2xl justify-between gap-4">
-          <div className="rounded-xl border border-slate-700 bg-slate-900 px-5 py-3"><div className="text-sm text-slate-400">Weiß</div><div className="text-2xl font-bold">{clockMinutes === 0 ? '∞' : formatTime(whiteTime)}</div></div>
-          <div className="rounded-xl border border-slate-700 bg-slate-900 px-5 py-3 text-right"><div className="text-sm text-slate-400">{botElo !== null ? 'Bot (Schwarz)' : 'Schwarz'}</div><div className="text-2xl font-bold">{clockMinutes === 0 ? '∞' : formatTime(blackTime)}</div></div>
+          <div className="rounded-xl border border-slate-700 bg-slate-900 px-5 py-3"><div className="text-sm text-slate-400">{botElo !== null && botColor === 'w' ? 'Bot (Weiß)' : 'Weiß'}</div><div className="text-2xl font-bold">{clockMinutes === 0 ? '∞' : formatTime(whiteTime)}</div></div>
+          <div className="rounded-xl border border-slate-700 bg-slate-900 px-5 py-3 text-right"><div className="text-sm text-slate-400">{botElo !== null && botColor === 'b' ? 'Bot (Schwarz)' : 'Schwarz'}</div><div className="text-2xl font-bold">{clockMinutes === 0 ? '∞' : formatTime(blackTime)}</div></div>
         </div>
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
           <div className="overflow-hidden rounded-xl border-4 border-slate-700 shadow-2xl">
             <div className="relative grid grid-cols-8">
               {board.map((row, rowIndex) => row.map((piece, colIndex) => {
-                const square = String.fromCharCode(97 + colIndex) + (8 - rowIndex);
+                const square = isFlipped
+                  ? String.fromCharCode(104 - colIndex) + (rowIndex + 1)
+                  : String.fromCharCode(97 + colIndex) + (8 - rowIndex);
                 const isLight = (rowIndex + colIndex) % 2 === 0;
                 return (
                   <button key={square} type="button" aria-label={square + (piece ? ', ' + (piece.color === 'w' ? 'weiße' : 'schwarze') + ' Figur' : '')}
-                    disabled={botThinking || (botElo !== null && game.turn() === 'b')}
+                    disabled={botThinking || (botElo !== null && game.turn() === botColor)}
                     onClick={() => handleSquareClick(square)}
                     className={'relative flex aspect-square w-11 items-center justify-center text-3xl disabled:cursor-wait sm:w-16 sm:text-5xl md:w-20 md:text-6xl ' + (isLight ? 'bg-amber-100' : 'bg-amber-700') + (selectedSquare === square ? ' ring-4 ring-blue-500 ring-inset' : '')}>
                     {piece && <span className={piece.color === 'w' ? 'text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]' : 'text-slate-900 drop-shadow-[0_2px_2px_rgba(255,255,255,0.5)]'}>{pieceSymbols[piece.color + piece.type.toUpperCase()]}</span>}
