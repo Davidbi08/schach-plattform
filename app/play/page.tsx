@@ -272,7 +272,7 @@ export default function Home() {
                     disabled={botThinking || (botElo !== null && game.turn() === botColor)}
                     onClick={() => handleSquareClick(square)}
                     className={'relative flex aspect-square w-11 items-center justify-center text-3xl disabled:cursor-wait sm:w-16 sm:text-5xl md:w-20 md:text-6xl ' + (isLight ? 'bg-amber-100' : 'bg-amber-700') + (selectedSquare === square ? ' ring-4 ring-blue-500 ring-inset' : '')}>
-                    {piece && <span style={isAnimatedMove ? ({ '--move-from-x': moveFromX + '%', '--move-from-y': moveFromY + '%' } as import('react').CSSProperties) : undefined} className={(piece.color === 'w' ? 'text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]' : 'text-slate-900 drop-shadow-[0_2px_2px_rgba(255,255,255,0.5)]') + (isAnimatedMove ? ' animate-chess-piece-move' : '')}>{pieceSymbols[piece.color + piece.type.toUpperCase()]}</span>}
+                    {piece && <span style={isAnimatedMove ? ({ '--move-from-x': moveFromX + '%', '--move-from-y': moveFromY + '%' } as import('react').CSSProperties) : undefined} className={'absolute inset-0 flex items-center justify-center ' + (piece.color === 'w' ? 'text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]' : 'text-slate-900 drop-shadow-[0_2px_2px_rgba(255,255,255,0.5)]') + (isAnimatedMove ? ' animate-chess-piece-move' : '')}>{pieceSymbols[piece.color + piece.type.toUpperCase()]}</span>}
                     {possibleMoves.includes(square) && <span className="absolute h-3 w-3 rounded-full bg-slate-800/60" />}
                   </button>
                 );
