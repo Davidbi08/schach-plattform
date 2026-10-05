@@ -56,6 +56,59 @@ export default function OnlinePage() {
       });
       channelRef.current = channel;
 
+      let pendingMatch: {
+        room: string;
+        whiteId: string;
+        blackId: string;
+        readyPlayers: Set<string>;
+        proposalSent: boolean;
+        readySendStarted: boolean;
+        readySent: boolean;
+      } | null = null;
+
+      const maybeOpenMatch = () => {
+        if (!pendingMatch || matchedRef.current || !pendingMatch.readySent) return;
+        if (!pendingMatch.readyPlayers.has(pendingMatch.whiteId) || !pendingMatch.readyPlayers.has(pendingMatch.blackId)) return;
+        openMatch(pendingMatch.whiteId, pendingMatch.blackId, selectedControl);
+      };
+
+      const getPendingMatch = (whiteId: string, blackId: string) => {
+        if (whiteId === blackId || (playerId !== whiteId && playerId !== blackId)) return null;
+        const room = getRoomId(whiteId, blackId);
+        if (pendingMatch && pendingMatch.room !== room) return null;
+        pendingMatch ??= { room, whiteId, blackId, readyPlayers: new Set(), proposalSent: false, readySendStarted: false, readySent: false };
+        return pendingMatch;
+      };
+
+      const confirmMatchReady = (match: NonNullable<typeof pendingMatch>) => {
+        if (match.readySent || match.readySendStarted) return;
+        match.readySendStarted = true;
+        match.readyPlayers.add(playerId);
+        void channel.send({ type: "broadcast", event: "match-ready", payload: { room: match.room, by: playerId } }).then((status) => {
+          match.readySendStarted = false;
+          if (status !== "ok") {
+            setMessage("Die Verbindung zum Gegner konnte nicht bestätigt werden. Bitte starte die Suche erneut.");
+            return;
+          }
+          match.readySent = true;
+          maybeOpenMatch();
+        });
+      };
+
+      channel.on("broadcast", { event: "match-proposed" }, ({ payload }) => {
+        if (!payload || payload.controlId !== selectedControl.id || typeof payload.whiteId !== "string" || typeof payload.blackId !== "string") return;
+        const match = getPendingMatch(payload.whiteId, payload.blackId);
+        if (!match || payload.room !== match.room) return;
+        setMessage("Gegner gefunden. Beide Verbindungen werden bestätigt …");
+        confirmMatchReady(match);
+      });
+
+      channel.on("broadcast", { event: "match-ready" }, ({ payload }) => {
+        if (!pendingMatch || payload?.room !== pendingMatch.room || (payload.by !== pendingMatch.whiteId && payload.by !== pendingMatch.blackId)) return;
+        pendingMatch.readyPlayers.add(payload.by);
+        maybeOpenMatch();
+      });
+
       const reconcileQueue = () => {
         const allPlayers = Object.values(channel.presenceState())
           .flat()
@@ -72,7 +125,23 @@ export default function OnlinePage() {
         const whitePlayer = allPlayers[0];
         const blackPlayer = allPlayers[1];
         if (playerId === whitePlayer.playerId || playerId === blackPlayer.playerId) {
-          openMatch(whitePlayer.playerId, blackPlayer.playerId, selectedControl);
+          const match = getPendingMatch(whitePlayer.playerId, blackPlayer.playerId);
+          if (!match) return;
+          setMessage("Gegner gefunden. Beide Verbindungen werden bestätigt …");
+          if (!match.proposalSent) {
+            match.proposalSent = true;
+            void channel.send({
+              type: "broadcast",
+              event: "match-proposed",
+              payload: { room: match.room, whiteId: match.whiteId, blackId: match.blackId, controlId: selectedControl.id },
+            }).then((status) => {
+              if (status === "ok") confirmMatchReady(match);
+              else {
+                match.proposalSent = false;
+                setMessage("Die Verbindung zum Gegner konnte nicht bestätigt werden. Bitte starte die Suche erneut.");
+              }
+            });
+          }
         }
       };
 
