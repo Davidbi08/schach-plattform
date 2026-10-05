@@ -13,6 +13,12 @@ const clockOptions = [
   { id: '30+0', minutes: 30, increment: 0, label: '30+0', category: 'Klassisch' },
 ];
 
+const colorOptions = [
+  { id: 'white', label: 'Weiß', icon: '♔', description: 'Du spielst mit den weißen Figuren.' },
+  { id: 'black', label: 'Schwarz', icon: '♚', description: 'Du spielst mit den schwarzen Figuren.' },
+  { id: 'random', label: 'Zufall', icon: '🎲', description: 'Die Farbe wird für dich ausgelost.' },
+];
+
 const bots = [
   { elo: 500, name: 'Anfänger', description: 'Ein ruhiger Einstieg zum Üben der Grundlagen.', icon: '♟' },
   { elo: 1000, name: 'Gelegenheitsspieler', description: 'Ein entspannter Gegner für die ersten Partien.', icon: '♞' },
@@ -24,6 +30,7 @@ const bots = [
 export default function BotPage() {
   const [selectedElo, setSelectedElo] = useState<number | null>(null);
   const [selectedClock, setSelectedClock] = useState('10+0');
+  const [selectedColor, setSelectedColor] = useState('white');
   const clock = clockOptions.find((option) => option.id === selectedClock) ?? clockOptions[4];
 
   return (
@@ -58,6 +65,21 @@ export default function BotPage() {
             );
           })}
         </section>
+        <section className="mt-8" aria-label="Farbe auswählen">
+          <h2 className="mb-3 text-xl font-semibold">Deine Farbe</h2>
+          <div className="grid gap-3 sm:grid-cols-3">
+            {colorOptions.map((option) => (
+              <button key={option.id} type="button" aria-pressed={selectedColor === option.id} onClick={() => setSelectedColor(option.id)}
+                className={selectedColor === option.id
+                  ? 'rounded-xl border border-emerald-400 bg-emerald-950/60 px-4 py-3 text-left ring-2 ring-emerald-400/40'
+                  : 'rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-left hover:border-slate-500'}>
+                <span className="mr-2 text-xl" aria-hidden="true">{option.icon}</span>
+                <span className="font-bold">{option.label}</span>
+                <span className="mt-1 block text-sm text-slate-400">{option.description}</span>
+              </button>
+            ))}
+          </div>
+        </section>
         <section className="mt-8" aria-label="Bedenkzeit auswählen">
           <h2 className="mb-3 text-xl font-semibold">Bedenkzeit</h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -78,7 +100,7 @@ export default function BotPage() {
         <p className="mt-5 text-sm text-slate-400">Für Offline-Partien die installierte App einmal mit Internet öffnen, damit Seiten und Bot-Engine gespeichert werden.</p>
         <div className="mt-6 flex flex-wrap items-center gap-4">
           {selectedElo !== null ? (
-            <a href={'/play?mode=bot&elo=' + selectedElo + '&time=' + clock.minutes + '&increment=' + clock.increment} className="rounded-xl bg-emerald-400 px-6 py-3 font-bold text-slate-950 transition hover:bg-emerald-300">
+            <a href={'/play?mode=bot&elo=' + selectedElo + '&time=' + clock.minutes + '&increment=' + clock.increment + '&color=' + selectedColor} className="rounded-xl bg-emerald-400 px-6 py-3 font-bold text-slate-950 transition hover:bg-emerald-300">
               Spiel gegen {selectedElo}-Elo-Bot starten
             </a>
           ) : <p aria-live="polite" className="text-sm text-slate-300">Wähle zuerst eine Spielstärke aus.</p>}
