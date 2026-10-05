@@ -21,6 +21,7 @@ export default function Home() {
   const [whiteTime, setWhiteTime] = useState(600);
   const [blackTime, setBlackTime] = useState(600);
   const [clockMinutes, setClockMinutes] = useState(10);
+  const [incrementSeconds, setIncrementSeconds] = useState(0);
   const [moves, setMoves] = useState<string[]>([]);
   const [botElo, setBotElo] = useState<number | null>(null);
   const [botThinking, setBotThinking] = useState(false);
@@ -65,11 +66,13 @@ export default function Home() {
       const elo = Number(params.get('elo'));
       if ([500, 1000, 1500, 2000, 2500].includes(elo)) setBotElo(elo);
       const minutes = Number(params.get('time'));
-      if ([0, 5, 10].includes(minutes)) {
+      const increment = Number(params.get('increment'));
+      if ([0, 1, 3, 5, 10, 15, 30].includes(minutes)) {
         setClockMinutes(minutes);
         setWhiteTime(minutes * 60);
         setBlackTime(minutes * 60);
       }
+      if ([0, 1, 2, 5, 10].includes(increment)) setIncrementSeconds(increment);
     }
   }, []);
 
@@ -106,6 +109,9 @@ export default function Home() {
               setMoves((oldMoves) => [...oldMoves, move.san]);
               const nextGame = new Chess(current.fen());
               animateMove(move.from, move.to, nextGame);
+              if (clockMinutes > 0 && incrementSeconds > 0 && move.color === 'b') {
+                setBlackTime((time) => time + incrementSeconds);
+              }
               setGame(nextGame);
             } catch {
               setEngineError('Der Bot-Zug konnte nicht übernommen werden. Bitte starte ein neues Spiel.');
@@ -131,7 +137,7 @@ export default function Home() {
       workerRef.current = null;
       worker.terminate();
     };
-  }, [botElo]);
+  }, [botElo, clockMinutes, incrementSeconds]);
 
   useEffect(() => {
     if (clockMinutes === 0) return;
@@ -175,6 +181,10 @@ export default function Home() {
       try {
         const move = game.move({ from: selectedSquare, to: square, promotion: 'q' });
         setMoves((oldMoves) => [...oldMoves, move.san]);
+        if (clockMinutes > 0 && incrementSeconds > 0) {
+          if (move.color === 'w') setWhiteTime((time) => time + incrementSeconds);
+          else setBlackTime((time) => time + incrementSeconds);
+        }
         const nextGame = new Chess(game.fen());
         animateMove(move.from, move.to, nextGame);
         setGame(nextGame);
@@ -231,7 +241,7 @@ export default function Home() {
       <div className="mx-auto flex min-h-screen max-w-6xl flex-col items-center px-4 py-10">
         <div className="mb-6 w-full max-w-2xl">
           <a href="/" className="text-sm text-slate-300 underline underline-offset-4 hover:text-white">← Zur Startseite</a>
-          {botElo !== null && <p className="mt-3 text-sm text-emerald-300">Spiel gegen den {botElo}-Elo-Bot · Stockfish 19</p>}
+          {botElo !== null && <p className="mt-3 text-sm text-emerald-300">Spiel gegen den {botElo}-Elo-Bot · Stockfish 19 · {clockMinutes === 0 ? 'ohne Zeit' : clockMinutes + '+' + incrementSeconds}</p>}
         </div>
         <div className="mb-6 text-center">
           <div className="mb-2 text-5xl">♟️</div>
@@ -286,7 +296,7 @@ export default function Home() {
           </div>
         </div>
         <button type="button" onClick={newGame} className="mt-6 rounded-xl bg-white px-6 py-3 font-semibold text-slate-950">🔄 Neues Spiel</button>
-        <p className="mt-5 max-w-md text-center text-sm text-slate-400">{clockMinutes === 0 ? 'Ohne Zeitbegrenzung' : clockMinutes + ' Minuten pro Spieler'} · Wähle eine Figur und anschließend ihr Zielfeld.</p>
+        <p className="mt-5 max-w-md text-center text-sm text-slate-400">{clockMinutes === 0 ? 'Ohne Zeitbegrenzung' : 'Bedenkzeit: ' + clockMinutes + '+' + incrementSeconds + ' · nach jedem Zug +' + incrementSeconds + ' s'} · Wähle eine Figur und anschließend ihr Zielfeld.</p>
       </div>
     </main>
   );
