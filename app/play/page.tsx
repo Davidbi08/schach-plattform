@@ -27,7 +27,6 @@ export default function Home() {
   const [botThinking, setBotThinking] = useState(false);
   const [engineReady, setEngineReady] = useState(false);
   const [engineError, setEngineError] = useState('');
-  const [animatedMove, setAnimatedMove] = useState<{ to: string; symbol: string; color: string; dx: number; dy: number; running: boolean } | null>(null);
   const workerRef = useRef<Worker | null>(null);
   const readyRef = useRef(false);
   const requestedFenRef = useRef<string | null>(null);
@@ -35,30 +34,7 @@ export default function Home() {
   const gameGenerationRef = useRef(0);
   const pendingGenerationRef = useRef<number | null>(null);
   const botDelayRef = useRef<number | null>(null);
-  const animationTimerRef = useRef<number | null>(null);
   const board = game.board();
-
-  function animateMove(from: string, to: string, nextGame: Chess) {
-    const piece = nextGame.get(to as never);
-    if (!piece) return;
-    if (animationTimerRef.current !== null) window.clearTimeout(animationTimerRef.current);
-    const fromFile = from.charCodeAt(0) - 97;
-    const toFile = to.charCodeAt(0) - 97;
-    const fromRow = 8 - Number(from[1]);
-    const toRow = 8 - Number(to[1]);
-    setAnimatedMove({
-      to,
-      symbol: pieceSymbols[piece.color + piece.type.toUpperCase()],
-      color: piece.color,
-      dx: toFile - fromFile,
-      dy: toRow - fromRow,
-      running: false,
-    });
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      setAnimatedMove((current) => current ? { ...current, running: true } : current);
-    }));
-    animationTimerRef.current = window.setTimeout(() => setAnimatedMove(null), 850);
-  }
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -108,7 +84,6 @@ export default function Home() {
               });
               setMoves((oldMoves) => [...oldMoves, move.san]);
               const nextGame = new Chess(current.fen());
-              animateMove(move.from, move.to, nextGame);
               if (clockMinutes > 0 && incrementSeconds > 0 && move.color === 'b') {
                 setBlackTime((time) => time + incrementSeconds);
               }
@@ -186,7 +161,6 @@ export default function Home() {
           else setBlackTime((time) => time + incrementSeconds);
         }
         const nextGame = new Chess(game.fen());
-        animateMove(move.from, move.to, nextGame);
         setGame(nextGame);
         setSelectedSquare(null);
         setPossibleMoves([]);
@@ -208,10 +182,7 @@ export default function Home() {
   function newGame() {
     gameGenerationRef.current += 1;
     if (botDelayRef.current !== null) window.clearTimeout(botDelayRef.current);
-    if (animationTimerRef.current !== null) window.clearTimeout(animationTimerRef.current);
     botDelayRef.current = null;
-    animationTimerRef.current = null;
-    setAnimatedMove(null);
     requestedFenRef.current = null;
     pendingGenerationRef.current = null;
     pendingGameRef.current = null;
@@ -266,25 +237,13 @@ export default function Home() {
                     disabled={botThinking || (botElo !== null && game.turn() === 'b')}
                     onClick={() => handleSquareClick(square)}
                     className={'relative flex aspect-square w-11 items-center justify-center text-3xl disabled:cursor-wait sm:w-16 sm:text-5xl md:w-20 md:text-6xl ' + (isLight ? 'bg-amber-100' : 'bg-amber-700') + (selectedSquare === square ? ' ring-4 ring-blue-500 ring-inset' : '')}>
-                    {piece && <span className={(piece.color === 'w' ? 'text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]' : 'text-slate-900 drop-shadow-[0_2px_2px_rgba(255,255,255,0.5)]') + (animatedMove?.to === square ? ' opacity-0' : '')}>{pieceSymbols[piece.color + piece.type.toUpperCase()]}</span>}
+                    {piece && <span className={piece.color === 'w' ? 'text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]' : 'text-slate-900 drop-shadow-[0_2px_2px_rgba(255,255,255,0.5)]'}>{pieceSymbols[piece.color + piece.type.toUpperCase()]}</span>}
                     {possibleMoves.includes(square) && <span className="absolute h-3 w-3 rounded-full bg-slate-800/60" />}
                   </button>
                 );
               }))}
             </div>
-            {animatedMove && (
-              <div className="pointer-events-none absolute inset-0 grid grid-cols-8 grid-rows-8" aria-hidden="true">
-                <span
-                  className={'z-10 flex items-center justify-center text-3xl sm:text-5xl md:text-6xl ' + (animatedMove.color === 'w' ? 'text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]' : 'text-slate-900 drop-shadow-[0_2px_2px_rgba(255,255,255,0.5)]')}
-                  style={{
-                    gridColumn: animatedMove.to.charCodeAt(0) - 96,
-                    gridRow: 9 - Number(animatedMove.to[1]),
-                    transform: animatedMove.running ? 'translate(0, 0)' : 'translate(' + (-animatedMove.dx * 100) + '%, ' + (-animatedMove.dy * 100) + '%)',
-                    transition: 'transform 750ms cubic-bezier(0.22, 0.75, 0.3, 1)',
-                  }}
-                >{animatedMove.symbol}</span>
-              </div>
-            )}
+
           </div>
           <div className="w-full rounded-xl border border-slate-700 bg-slate-900 p-4 lg:w-64">
             <h2 className="mb-3 text-lg font-bold">Zugliste</h2>
