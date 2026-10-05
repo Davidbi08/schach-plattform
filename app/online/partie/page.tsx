@@ -13,10 +13,46 @@ type ClockState = { whiteMs: number; blackMs: number; lastTick: number };
 type MovePayload = { from: string; to: string; promotion?: string; by: string; whiteMs: number; blackMs: number };
 type MatchEnd = { result: "1-0" | "0-1" | "1/2-1/2"; reason: string };
 
-const pieces: Record<string, string> = {
-  wK: "♔", wQ: "♕", wR: "♖", wB: "♗", wN: "♘", wP: "♙",
-  bK: "♚", bQ: "♛", bR: "♜", bB: "♝", bN: "♞", bP: "♟",
-};
+function ChessPieceIcon({ color, type }: { color: "w" | "b"; type: "k" | "q" | "r" | "b" | "n" | "p" }) {
+  const isWhite = color === "w";
+  return (
+    <svg viewBox="0 0 100 100" aria-hidden="true" className="h-[78%] w-[78%] overflow-visible drop-shadow-[0_2px_1px_rgba(15,23,42,0.35)]">
+      <g fill={isWhite ? "#fffdf7" : "#172033"} stroke={isWhite ? "#172033" : "#fffdf7"} strokeWidth="3.5" strokeLinejoin="round" strokeLinecap="round">
+        {type === "k" && <>
+          <path d="M47 8h6v8h8v6h-8v8h-6v-8h-8v-6h8z" />
+          <path d="M37 35c0-7 6-11 13-11s13 4 13 11l-4 7 10 29H31l10-29z" />
+          <path d="M26 71h48v9H26zM20 82h60v9H20z" />
+        </>}
+        {type === "q" && <>
+          <path d="M25 31l10 10 15-23 15 23 10-10-5 34H30z" />
+          <circle cx="25" cy="27" r="5" /><circle cx="50" cy="15" r="5" /><circle cx="75" cy="27" r="5" />
+          <path d="M34 68h32l7 8H27zM23 82h54v9H23z" />
+        </>}
+        {type === "r" && <>
+          <path d="M28 20h10v10h8V20h9v10h8V20h10v18H28z" />
+          <path d="M33 39h34l-4 31H37z" />
+          <path d="M29 71h42v8H29zM22 82h56v9H22z" />
+        </>}
+        {type === "b" && <>
+          <path d="M50 13c-5 9-19 18-19 31 0 8 5 13 12 16L31 72h38L57 60c7-3 12-8 12-16 0-13-14-22-19-31z" />
+          <path d="M42 35l16 19" fill="none" stroke={isWhite ? "#172033" : "#fffdf7"} strokeWidth="4" />
+          <path d="M29 73h42v7H29zM22 82h56v9H22z" />
+        </>}
+        {type === "n" && <>
+          <path d="M26 74c6-8 7-15 2-23-5-8 1-15 8-17-3-9 1-17 10-21l7 13c12 2 22 11 23 23l-3 24H26z" />
+          <path d="M43 28l10 7-12 1z" />
+          <circle cx="58" cy="39" r="2.6" fill={isWhite ? "#172033" : "#fffdf7"} stroke="none" />
+          <path d="M28 75h44v6H28zM21 83h58v8H21z" />
+        </>}
+        {type === "p" && <>
+          <circle cx="50" cy="30" r="12" />
+          <path d="M43 43h14l4 10 10 18H29l10-18z" />
+          <path d="M31 73h38v7H31zM23 82h54v9H23z" />
+        </>}
+      </g>
+    </svg>
+  );
+}
 
 function moveSnapshot(game: Chess): SavedMove[] {
   return game.history({ verbose: true }).map((move) => ({
@@ -390,8 +426,8 @@ export default function OnlineGamePage() {
                   const target = possibleMoves.includes(square);
                   return (
                     <button key={square} type="button" aria-label={square + (piece ? `, ${piece.color === "w" ? "weiße" : "schwarze"} Figur` : "")} onClick={() => handleSquareClick(square)} disabled={!localTurn || !started || !opponentOnline || Boolean(finished)}
-                      className={"relative flex aspect-square w-[11.5vw] max-w-[5.25rem] items-center justify-center text-[9vw] sm:w-[4.7rem] sm:text-5xl md:w-[5.1rem] md:text-6xl " + (light ? "bg-amber-100" : "bg-amber-700") + (selected ? " ring-4 ring-inset ring-blue-500" : "") + " disabled:cursor-default"}>
-                      {piece && <span className={piece.color === "w" ? "text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]" : "text-slate-950 drop-shadow-[0_2px_2px_rgba(255,255,255,0.55)]"}>{pieces[piece.color + piece.type.toUpperCase()]}</span>}
+                      className={"relative flex aspect-square w-[11.5vw] max-w-[5.25rem] items-center justify-center sm:w-[4.7rem] md:w-[5.1rem] " + (light ? "bg-amber-100" : "bg-amber-700") + (selected ? " ring-4 ring-inset ring-blue-500" : "") + " disabled:cursor-default"}>
+                      {piece && <ChessPieceIcon color={piece.color} type={piece.type} />}
                       {target && <span className="absolute h-3 w-3 rounded-full bg-slate-950/45" />}
                     </button>
                   );
@@ -427,7 +463,7 @@ export default function OnlineGamePage() {
           </aside>
         </div>
 
-        {promotion && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-labelledby="promotion-title"><div className="w-full max-w-sm rounded-2xl border border-slate-700 bg-slate-900 p-5 shadow-2xl"><h2 id="promotion-title" className="text-xl font-bold">Bauer umwandeln</h2><div className="mt-4 grid grid-cols-4 gap-2">{([{ piece: "q", label: "Dame" }, { piece: "r", label: "Turm" }, { piece: "b", label: "Läufer" }, { piece: "n", label: "Springer" }] as const).map(({ piece, label }) => <button key={piece} type="button" onClick={() => commitMove(promotion.from, promotion.to, piece)} className="rounded-xl border border-slate-700 bg-slate-950 p-3 text-center hover:border-emerald-400"><span className="block text-4xl">{pieces[(game.get(promotion.from)?.color ?? "w") + piece.toUpperCase()]}</span><span className="text-xs">{label}</span></button>)}</div><button type="button" onClick={() => setPromotion(null)} className="mt-4 w-full rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300 hover:bg-slate-800">Abbrechen</button></div></div>}
+        {promotion && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-labelledby="promotion-title"><div className="w-full max-w-sm rounded-2xl border border-slate-700 bg-slate-900 p-5 shadow-2xl"><h2 id="promotion-title" className="text-xl font-bold">Bauer umwandeln</h2><div className="mt-4 grid grid-cols-4 gap-2">{([{ piece: "q", label: "Dame" }, { piece: "r", label: "Turm" }, { piece: "b", label: "Läufer" }, { piece: "n", label: "Springer" }] as const).map(({ piece, label }) => <button key={piece} type="button" onClick={() => commitMove(promotion.from, promotion.to, piece)} className="flex flex-col items-center rounded-xl border border-slate-700 bg-slate-950 p-3 text-center hover:border-emerald-400"><ChessPieceIcon color={game.get(promotion.from)?.color ?? "w"} type={piece} /><span className="mt-1 text-xs">{label}</span></button>)}</div><button type="button" onClick={() => setPromotion(null)} className="mt-4 w-full rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300 hover:bg-slate-800">Abbrechen</button></div></div>}
       </div>
     </main>
   );
