@@ -56,7 +56,7 @@ export default function OnlinePage() {
       });
       channelRef.current = channel;
 
-      channel.on("presence", { event: "sync" }, () => {
+      const reconcileQueue = () => {
         const allPlayers = Object.values(channel.presenceState())
           .flat()
           .map((presence) => presence as unknown as LobbyPlayer)
@@ -72,7 +72,14 @@ export default function OnlinePage() {
         if (playerId === whitePlayer.playerId || playerId === blackPlayer.playerId) {
           openMatch(whitePlayer.playerId, blackPlayer.playerId, selectedControl);
         }
-      });
+      };
+
+      // `sync` is only the initial/full snapshot. A player who was already
+      // waiting receives later arrivals as `join`, so both events must
+      // reconcile the queue or the first player can wait forever.
+      channel.on("presence", { event: "sync" }, reconcileQueue);
+      channel.on("presence", { event: "join" }, reconcileQueue);
+      channel.on("presence", { event: "leave" }, reconcileQueue);
 
       channel.subscribe((status) => {
         if (status === "SUBSCRIBED") {
