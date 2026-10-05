@@ -131,10 +131,10 @@ export default function Home() {
             <div className="rounded-2xl border border-slate-700 bg-slate-900 p-6">
               <div className="text-4xl">🤖</div>
               <h3 className="mt-4 text-xl font-bold">
-                Gegen Computer
+                <Link href="/bot" className="hover:text-emerald-300">Gegen Bot spielen</Link>
               </h3>
               <p className="mt-2 text-slate-400">
-                Spiele später gegen eine KI.
+                Wähle aus fünf Bot-Gegnern mit unterschiedlicher Spielstärke.
               </p>
             </div>
 
