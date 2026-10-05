@@ -5,6 +5,7 @@ import { Chess, type Square } from "chess.js";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { describeMaterialAdvantage, getMaterialAdvantage } from "@/lib/chess/material";
 import { formatClock } from "../protocol";
 import { saveOnlineGame, type SavedMove } from "../history-store";
 
@@ -387,6 +388,7 @@ export default function OnlineGamePage() {
   const boardRows = game.board();
   const shownRows = config && !config.white ? boardRows.slice().reverse().map((row) => row.slice().reverse()) : boardRows;
   const whoseTurn = game.turn() === "w" ? "Weiß" : "Schwarz";
+  const material = describeMaterialAdvantage(getMaterialAdvantage(game), config?.white ? "w" : "b");
   const localTurn = config ? (game.turn() === "w") === config.white : false;
   const endMessage = finished
     ? finished.result === "1/2-1/2" ? `Remis · ${finished.reason}` : (finished.result === (config?.white ? "1-0" : "0-1") ? "Du gewinnst" : "Dein Gegner gewinnt") + ` · ${finished.reason}`
@@ -442,6 +444,10 @@ export default function OnlineGamePage() {
           </section>
 
           <aside className="flex w-full flex-col gap-4 lg:w-72">
+            <section className="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-900 p-4" aria-live="polite" aria-label={`Materialbilanz: ${material.description}`}>
+              <div><h2 className="text-sm font-semibold text-slate-300">Figurenpunkte</h2><p className="mt-1 text-sm text-slate-400">{material.description}</p></div>
+              <span className={`text-2xl font-bold tabular-nums ${material.ahead ? "text-emerald-300" : material.score === "0" ? "text-slate-200" : "text-rose-300"}`}>{material.score}</span>
+            </section>
             <section className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
               <div className="flex items-center gap-3"><span className={"h-2.5 w-2.5 rounded-full " + (opponentOnline ? "bg-emerald-400" : "bg-amber-400")} /><div><h2 className="font-semibold">Dein Gegner</h2><p className="text-sm text-slate-400">{opponentOnline ? "Verbunden" : "Verbindung wird hergestellt"}</p></div></div>
               <p className="mt-4 border-t border-slate-800 pt-3 text-sm text-slate-400">Bedenkzeit: {config.initialSeconds === 0 ? "ohne Uhr" : `${Math.floor(config.initialSeconds / 60)}+${config.incrementSeconds}`}</p>
