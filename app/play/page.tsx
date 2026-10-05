@@ -28,12 +28,15 @@ export default function Home() {
   const [botThinking, setBotThinking] = useState(false);
   const [engineReady, setEngineReady] = useState(false);
   const [engineError, setEngineError] = useState('');
+  const [animatedMove, setAnimatedMove] = useState<{ from: string; to: string } | null>(null);
   const workerRef = useRef<Worker | null>(null);
   const readyRef = useRef(false);
   const requestedFenRef = useRef<string | null>(null);
   const pendingGameRef = useRef<Chess | null>(null);
   const gameGenerationRef = useRef(0);
   const pendingGenerationRef = useRef<number | null>(null);
+  const botDelayRef = useRef<number | null>(null);
+  const animationTimerRef = useRef<number | null>(null);
   const isFlipped = botElo !== null && botColor === 'w';
   const boardRows = game.board();
   const board = isFlipped ? boardRows.slice().reverse().map((row) => row.slice().reverse()) : boardRows;
@@ -88,6 +91,7 @@ export default function Home() {
                 to: uciMove.slice(2, 4),
                 promotion: uciMove[4] ?? 'q',
               });
+              animateMove(move.from, move.to);
               setMoves((oldMoves) => [...oldMoves, move.san]);
               const nextGame = new Chess(current.fen());
               if (clockMinutes > 0 && incrementSeconds > 0) {
@@ -113,6 +117,8 @@ export default function Home() {
       setEngineError('Dein Browser konnte den Bot nicht starten. Bitte lade die Seite neu.');
     }
     return () => {
+      if (botDelayRef.current !== null) window.clearTimeout(botDelayRef.current);
+      botDelayRef.current = null;
       readyRef.current = false;
       workerRef.current = null;
       worker.terminate();
@@ -142,12 +148,25 @@ export default function Home() {
     const engine = workerRef.current;
     const targetElo = Math.max(1320, botElo);
     const depth = botElo === 500 ? 1 : botElo === 1000 ? 4 : botElo === 1500 ? 8 : botElo === 2000 ? 9 : 10;
-    if (pendingGenerationRef.current !== gameGenerationRef.current) return;
-    engine.postMessage('setoption name UCI_LimitStrength value true');
-    engine.postMessage('setoption name UCI_Elo value ' + targetElo);
-    engine.postMessage('position fen ' + fen);
-    engine.postMessage('go depth ' + depth);
+    const thinkDelay = 650 + Math.floor(Math.random() * 850);
+    botDelayRef.current = window.setTimeout(() => {
+      botDelayRef.current = null;
+      if (pendingGenerationRef.current !== gameGenerationRef.current) return;
+      engine.postMessage('setoption name UCI_LimitStrength value true');
+      engine.postMessage('setoption name UCI_Elo value ' + targetElo);
+      engine.postMessage('position fen ' + fen);
+      engine.postMessage('go depth ' + depth);
+    }, thinkDelay);
   }, [game, botElo, botColor, whiteTime, blackTime, engineReady]);
+
+  function animateMove(from: string, to: string) {
+    if (animationTimerRef.current !== null) window.clearTimeout(animationTimerRef.current);
+    setAnimatedMove({ from, to });
+    animationTimerRef.current = window.setTimeout(() => {
+      setAnimatedMove(null);
+      animationTimerRef.current = null;
+    }, 260);
+  }
 
   function handleSquareClick(square: string) {
     if (game.isGameOver() || (clockMinutes > 0 && (whiteTime === 0 || blackTime === 0)) || botThinking) return;
@@ -156,6 +175,7 @@ export default function Home() {
     if (selectedSquare) {
       try {
         const move = game.move({ from: selectedSquare, to: square, promotion: 'q' });
+        animateMove(move.from, move.to);
         setMoves((oldMoves) => [...oldMoves, move.san]);
         if (clockMinutes > 0 && incrementSeconds > 0) {
           if (move.color === 'w') setWhiteTime((time) => time + incrementSeconds);
@@ -182,6 +202,11 @@ export default function Home() {
 
   function newGame() {
     gameGenerationRef.current += 1;
+    if (botDelayRef.current !== null) window.clearTimeout(botDelayRef.current);
+    botDelayRef.current = null;
+    if (animationTimerRef.current !== null) window.clearTimeout(animationTimerRef.current);
+    animationTimerRef.current = null;
+    setAnimatedMove(null);
     requestedFenRef.current = null;
     pendingGenerationRef.current = null;
     pendingGameRef.current = null;
@@ -211,6 +236,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-slate-950 text-white">
+      <style>{`@keyframes chess-piece-move { from { transform: translate(var(--move-from-x), var(--move-from-y)); } to { transform: translate(0, 0); } } .animate-chess-piece-move { animation: chess-piece-move 220ms ease-out both; }`}</style>
       <div className="mx-auto flex min-h-screen max-w-6xl flex-col items-center px-4 py-10">
         <div className="mb-6 w-full max-w-2xl">
           <a href="/" className="text-sm text-slate-300 underline underline-offset-4 hover:text-white">← Zur Startseite</a>
@@ -236,12 +262,17 @@ export default function Home() {
                   ? String.fromCharCode(104 - colIndex) + (rowIndex + 1)
                   : String.fromCharCode(97 + colIndex) + (8 - rowIndex);
                 const isLight = (rowIndex + colIndex) % 2 === 0;
+                const fileDelta = animatedMove ? animatedMove.to.charCodeAt(0) - animatedMove.from.charCodeAt(0) : 0;
+                const rankDelta = animatedMove ? Number(animatedMove.to[1]) - Number(animatedMove.from[1]) : 0;
+                const moveFromX = (isFlipped ? fileDelta : -fileDelta) * 100;
+                const moveFromY = (isFlipped ? -rankDelta : rankDelta) * 100;
+                const isAnimatedMove = animatedMove?.to === square;
                 return (
                   <button key={square} type="button" aria-label={square + (piece ? ', ' + (piece.color === 'w' ? 'weiße' : 'schwarze') + ' Figur' : '')}
                     disabled={botThinking || (botElo !== null && game.turn() === botColor)}
                     onClick={() => handleSquareClick(square)}
                     className={'relative flex aspect-square w-11 items-center justify-center text-3xl disabled:cursor-wait sm:w-16 sm:text-5xl md:w-20 md:text-6xl ' + (isLight ? 'bg-amber-100' : 'bg-amber-700') + (selectedSquare === square ? ' ring-4 ring-blue-500 ring-inset' : '')}>
-                    {piece && <span className={piece.color === 'w' ? 'text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]' : 'text-slate-900 drop-shadow-[0_2px_2px_rgba(255,255,255,0.5)]'}>{pieceSymbols[piece.color + piece.type.toUpperCase()]}</span>}
+                    {piece && <span style={isAnimatedMove ? ({ '--move-from-x': moveFromX + '%', '--move-from-y': moveFromY + '%' } as import('react').CSSProperties) : undefined} className={(piece.color === 'w' ? 'text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]' : 'text-slate-900 drop-shadow-[0_2px_2px_rgba(255,255,255,0.5)]') + (isAnimatedMove ? ' animate-chess-piece-move' : '')}>{pieceSymbols[piece.color + piece.type.toUpperCase()]}</span>}
                     {possibleMoves.includes(square) && <span className="absolute h-3 w-3 rounded-full bg-slate-800/60" />}
                   </button>
                 );
