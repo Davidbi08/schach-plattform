@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Chess } from 'chess.js';
-import { ChessPieceIcon } from '@/components/chess-piece';
+import { Chess } from 'chess.js';import { ChessPieceIcon } from '@/components/chess-piece';
 import { getMaterialAdvantage } from '@/lib/chess/material';
+import { createClient } from '@/lib/supabase/client';
 
 function formatTime(seconds: number) {
   const minutes = Math.floor(seconds / 60);
@@ -24,7 +24,7 @@ export default function Home() {
   const [botColor, setBotColor] = useState<'w' | 'b'>('b');
   const [botThinking, setBotThinking] = useState(false);
   const [engineReady, setEngineReady] = useState(false);
-  const [engineError, setEngineError] = useState('');
+  const [engineError, setEngineError] = useState(''); const [playerName, setPlayerName] = useState('Gast');
   const [animatedMove, setAnimatedMove] = useState<{ from: string; to: string } | null>(null);
   const workerRef = useRef<Worker | null>(null);
   const readyRef = useRef(false);
@@ -33,9 +33,7 @@ export default function Home() {
   const gameGenerationRef = useRef(0);
   const pendingGenerationRef = useRef<number | null>(null);
   const botDelayRef = useRef<number | null>(null);
-  const animationTimerRef = useRef<number | null>(null);
-  const isFlipped = botElo !== null && botColor === 'w';
-  const boardRows = game.board();
+  const animationTimerRef = useRef<number | null>(null);  useEffect(() => { let active = true; const loadPlayerName = async () => { try { const supabase = createClient(); const { data: { user } } = await supabase.auth.getUser(); if (!user) return; const { data } = await supabase.from('profiles').select('username').eq('id', user.id).maybeSingle(); if (active && typeof data?.username === 'string' && data.username.trim()) setPlayerName(data.username.trim().slice(0, 20)); } catch { /* optional profile name */ } }; void loadPlayerName(); return () => { active = false; }; }, []); const isFlipped = botElo !== null && botColor === 'w';  const whitePlayerName = botElo !== null ? (botColor === 'w' ? 'Bot' : playerName) : 'Weiß'; const blackPlayerName = botElo !== null ? (botColor === 'b' ? 'Bot' : playerName) : 'Schwarz'; const boardRows = game.board();
   const board = isFlipped ? boardRows.slice().reverse().map((row) => row.slice().reverse()) : boardRows;
 
   useEffect(() => {
@@ -257,8 +255,8 @@ export default function Home() {
         {promotionPending && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-labelledby="promotion-title"><div className="w-full max-w-sm rounded-2xl border border-slate-700 bg-slate-900 p-5 shadow-2xl"><h2 id="promotion-title" className="text-xl font-bold">Wähle eine Figur</h2><p className="mt-1 text-sm text-slate-400">Dein Bauer kann umgewandelt werden in:</p><div className="mt-4 grid grid-cols-4 gap-2">{([{ piece: 'q', label: 'Dame' }, { piece: 'r', label: 'Turm' }, { piece: 'b', label: 'Läufer' }, { piece: 'n', label: 'Springer' }] as const).map(({ piece, label }) => <button key={piece} type="button" onClick={() => choosePromotion(piece)} className="flex flex-col items-center rounded-xl border border-slate-700 bg-slate-950 p-3 hover:border-emerald-400 hover:bg-slate-800"><ChessPieceIcon color={game.get(promotionPending.from as never)?.color ?? 'w'} type={piece} /><span className="mt-1 text-xs">{label}</span></button>)}</div><button type="button" onClick={() => setPromotionPending(null)} className="mt-4 w-full rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300 hover:bg-slate-800">Abbrechen</button></div></div>} {engineError && <p role="alert" className="mb-4 max-w-2xl rounded-xl border border-red-800 bg-red-950/50 px-4 py-3 text-sm text-red-200">{engineError}</p>}
         {botElo !== null && !engineReady && !engineError && <p className="mb-4 text-sm text-slate-400">Bot wird geladen …</p>}
         <div className="mb-4 flex w-full max-w-2xl justify-between gap-4">
-          <div className="rounded-xl border border-slate-700 bg-slate-900 px-5 py-3"><div className="text-sm text-slate-400">{botElo !== null && botColor === 'w' ? 'Bot (Weiß)' : 'Weiß'}</div><div className="text-2xl font-bold">{clockMinutes === 0 ? '∞' : formatTime(whiteTime)}</div></div>
-          <div className="rounded-xl border border-slate-700 bg-slate-900 px-5 py-3 text-right"><div className="text-sm text-slate-400">{botElo !== null && botColor === 'b' ? 'Bot (Schwarz)' : 'Schwarz'}</div><div className="text-2xl font-bold">{clockMinutes === 0 ? '∞' : formatTime(blackTime)}</div></div>
+          <div className="rounded-xl border border-slate-700 bg-slate-900 px-5 py-3"><div className="text-sm text-slate-400">{whitePlayerName}</div><div className="text-2xl font-bold">{clockMinutes === 0 ? '∞' : formatTime(whiteTime)}</div></div>
+          <div className="rounded-xl border border-slate-700 bg-slate-900 px-5 py-3 text-right"><div className="text-sm text-slate-400">{blackPlayerName}</div><div className="text-2xl font-bold">{clockMinutes === 0 ? '∞' : formatTime(blackTime)}</div></div>
         </div>
         <div className="mb-4 flex w-full max-w-2xl items-center justify-between rounded-xl border border-slate-700 bg-slate-900 px-5 py-3" aria-live="polite" aria-label={'Materialbilanz: ' + materialLeader}>
           <div><div className="text-sm text-slate-400">Figurenpunkte</div><div className="text-sm font-medium">{materialLeader}</div></div>
