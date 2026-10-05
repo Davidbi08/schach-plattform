@@ -5,9 +5,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
-import { createPlayerId, getRoomId, ONLINE_TIME_CONTROLS, type TimeControl } from "./protocol";
-
-type LobbyPlayer = { playerId: string; queuedAt: number };
+import { createPlayerId, getRoomId, ONLINE_TIME_CONTROLS, type TimeControl } from "./protocol";type LobbyPlayer = { playerId: string; queuedAt: number; username?: string };
 
 export default function OnlinePage() {
   const [selectedControl, setSelectedControl] = useState(ONLINE_TIME_CONTROLS[2]);
@@ -17,9 +15,10 @@ export default function OnlinePage() {
   const channelRef = useRef<RealtimeChannel | null>(null);
   const playerIdRef = useRef<string | null>(null);
   const matchedRef = useRef(false);
+  const usernameRef = useRef("");
   const router = useRouter();
 
-  function openMatch(whiteId: string, blackId: string, control: TimeControl) {
+  function openMatch(whiteId: string, blackId: string, whiteName: string, blackName: string, control: TimeControl) {
     if (matchedRef.current) return;
     matchedRef.current = true;
     const playerId = playerIdRef.current;
@@ -32,6 +31,8 @@ export default function OnlinePage() {
       white: String(playerId === whiteId),
       initial: String(control.initialSeconds),
       increment: String(control.incrementSeconds),
+      whiteName,
+      blackName,
     });
     setMessage("Gegner gefunden. Die Partie wird geöffnet …");
     const channel = channelRef.current;
@@ -51,6 +52,10 @@ export default function OnlinePage() {
       const supabase = createClient();
       const playerId = createPlayerId();
       playerIdRef.current = playerId;
+      let username = "";
+      try { const { data: { user } } = await supabase.auth.getUser(); if (user) { const { data } = await supabase.from("profiles").select("username").eq("id", user.id).maybeSingle(); if (typeof data?.username === "string") username = data.username.trim().slice(0, 20); } } catch { /* profile is optional */ }
+      if (!username) username = "Gast-" + playerId.slice(0, 4).toUpperCase();
+      usernameRef.current = username;
       const channel = supabase.channel("chess-lobby-" + selectedControl.id, {
         config: { presence: { key: playerId }, broadcast: { self: false } },
       });
@@ -60,6 +65,8 @@ export default function OnlinePage() {
         room: string;
         whiteId: string;
         blackId: string;
+        whiteName: string;
+        blackName: string;
         readyPlayers: Set<string>;
         proposalSent: boolean;
         readySendStarted: boolean;
@@ -69,14 +76,14 @@ export default function OnlinePage() {
       const maybeOpenMatch = () => {
         if (!pendingMatch || matchedRef.current || !pendingMatch.readySent) return;
         if (!pendingMatch.readyPlayers.has(pendingMatch.whiteId) || !pendingMatch.readyPlayers.has(pendingMatch.blackId)) return;
-        openMatch(pendingMatch.whiteId, pendingMatch.blackId, selectedControl);
+        openMatch(pendingMatch.whiteId, pendingMatch.blackId, pendingMatch.whiteName, pendingMatch.blackName, selectedControl);
       };
 
-      const getPendingMatch = (whiteId: string, blackId: string) => {
+      const getPendingMatch = (whiteId: string, blackId: string, whiteName: string, blackName: string) => {
         if (whiteId === blackId || (playerId !== whiteId && playerId !== blackId)) return null;
         const room = getRoomId(whiteId, blackId);
         if (pendingMatch && pendingMatch.room !== room) return null;
-        pendingMatch ??= { room, whiteId, blackId, readyPlayers: new Set(), proposalSent: false, readySendStarted: false, readySent: false };
+        pendingMatch ??= { room, whiteId, blackId, whiteName, blackName, readyPlayers: new Set(), proposalSent: false, readySendStarted: false, readySent: false };
         return pendingMatch;
       };
 
@@ -97,7 +104,8 @@ export default function OnlinePage() {
 
       channel.on("broadcast", { event: "match-proposed" }, ({ payload }) => {
         if (!payload || payload.controlId !== selectedControl.id || typeof payload.whiteId !== "string" || typeof payload.blackId !== "string") return;
-        const match = getPendingMatch(payload.whiteId, payload.blackId);
+        const validName = (value: unknown) => typeof value === "string" && value.trim() ? value.trim().slice(0, 20) : "Gast";
+        const match = getPendingMatch(payload.whiteId, payload.blackId, validName(payload.whiteName), validName(payload.blackName));
         if (!match || payload.room !== match.room) return;
         setMessage("Gegner gefunden. Beide Verbindungen werden bestätigt …");
         confirmMatchReady(match);
@@ -125,7 +133,7 @@ export default function OnlinePage() {
         const whitePlayer = allPlayers[0];
         const blackPlayer = allPlayers[1];
         if (playerId === whitePlayer.playerId || playerId === blackPlayer.playerId) {
-          const match = getPendingMatch(whitePlayer.playerId, blackPlayer.playerId);
+          const match = getPendingMatch(whitePlayer.playerId, blackPlayer.playerId, whitePlayer.username || "Gast", blackPlayer.username || "Gast");
           if (!match) return;
           setMessage("Gegner gefunden. Beide Verbindungen werden bestätigt …");
           if (!match.proposalSent) {
@@ -133,7 +141,7 @@ export default function OnlinePage() {
             void channel.send({
               type: "broadcast",
               event: "match-proposed",
-              payload: { room: match.room, whiteId: match.whiteId, blackId: match.blackId, controlId: selectedControl.id },
+              payload: { room: match.room, whiteId: match.whiteId, blackId: match.blackId, whiteName: match.whiteName, blackName: match.blackName, controlId: selectedControl.id },
             }).then((status) => {
               if (status === "ok") confirmMatchReady(match);
               else {
@@ -154,7 +162,7 @@ export default function OnlinePage() {
 
       channel.subscribe((status) => {
         if (status === "SUBSCRIBED") {
-          void channel.track({ playerId, queuedAt: Date.now() });
+          void channel.track({ playerId, username: usernameRef.current, queuedAt: Date.now() });
         } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
           setSearching(false);
           setMessage("Die Online-Verbindung konnte nicht aufgebaut werden. Bitte prüfe deine Internetverbindung und versuche es erneut.");
