@@ -5,6 +5,7 @@ import { Chess, type Square } from "chess.js";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { ChessPieceIcon } from "@/components/chess-piece";
 import { describeMaterialAdvantage, getMaterialAdvantage } from "@/lib/chess/material";
 import { formatClock } from "../protocol";
 import { saveOnlineGame, type SavedMove } from "../history-store";
@@ -13,47 +14,6 @@ type MatchConfig = { room: string; player: string; opponent: string; white: bool
 type ClockState = { whiteMs: number; blackMs: number; lastTick: number };
 type MovePayload = { from: string; to: string; promotion?: string; by: string; whiteMs: number; blackMs: number };
 type MatchEnd = { result: "1-0" | "0-1" | "1/2-1/2"; reason: string };
-
-function ChessPieceIcon({ color, type }: { color: "w" | "b"; type: "k" | "q" | "r" | "b" | "n" | "p" }) {
-  const isWhite = color === "w";
-  return (
-    <svg viewBox="0 0 100 100" aria-hidden="true" className="h-[78%] w-[78%] overflow-visible drop-shadow-[0_2px_1px_rgba(15,23,42,0.35)]">
-      <g fill={isWhite ? "#fffdf7" : "#172033"} stroke={isWhite ? "#172033" : "#fffdf7"} strokeWidth="3.5" strokeLinejoin="round" strokeLinecap="round">
-        {type === "k" && <>
-          <path d="M47 8h6v8h8v6h-8v8h-6v-8h-8v-6h8z" />
-          <path d="M37 35c0-7 6-11 13-11s13 4 13 11l-4 7 10 29H31l10-29z" />
-          <path d="M26 71h48v9H26zM20 82h60v9H20z" />
-        </>}
-        {type === "q" && <>
-          <path d="M25 31l10 10 15-23 15 23 10-10-5 34H30z" />
-          <circle cx="25" cy="27" r="5" /><circle cx="50" cy="15" r="5" /><circle cx="75" cy="27" r="5" />
-          <path d="M34 68h32l7 8H27zM23 82h54v9H23z" />
-        </>}
-        {type === "r" && <>
-          <path d="M28 20h10v10h8V20h9v10h8V20h10v18H28z" />
-          <path d="M33 39h34l-4 31H37z" />
-          <path d="M29 71h42v8H29zM22 82h56v9H22z" />
-        </>}
-        {type === "b" && <>
-          <path d="M50 13c-5 9-19 18-19 31 0 8 5 13 12 16L31 72h38L57 60c7-3 12-8 12-16 0-13-14-22-19-31z" />
-          <path d="M42 35l16 19" fill="none" stroke={isWhite ? "#172033" : "#fffdf7"} strokeWidth="4" />
-          <path d="M29 73h42v7H29zM22 82h56v9H22z" />
-        </>}
-        {type === "n" && <>
-          <path d="M26 74c6-8 7-15 2-23-5-8 1-15 8-17-3-9 1-17 10-21l7 13c12 2 22 11 23 23l-3 24H26z" />
-          <path d="M43 28l10 7-12 1z" />
-          <circle cx="58" cy="39" r="2.6" fill={isWhite ? "#172033" : "#fffdf7"} stroke="none" />
-          <path d="M28 75h44v6H28zM21 83h58v8H21z" />
-        </>}
-        {type === "p" && <>
-          <circle cx="50" cy="30" r="12" />
-          <path d="M43 43h14l4 10 10 18H29l10-18z" />
-          <path d="M31 73h38v7H31zM23 82h54v9H23z" />
-        </>}
-      </g>
-    </svg>
-  );
-}
 
 function moveSnapshot(game: Chess): SavedMove[] {
   return game.history({ verbose: true }).map((move) => ({
