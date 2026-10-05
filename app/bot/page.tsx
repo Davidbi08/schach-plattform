@@ -49,11 +49,12 @@ export default function BotPage() {
         <p className="mt-5 rounded-xl border border-slate-800 bg-slate-900/70 p-4 text-sm text-slate-400">
           Die Elo-Angaben sind ungefähre Schwierigkeitsstufen und keine garantierte Wertung. Besonders 500 und 1000 werden durch eine verkürzte Suche angenähert.
         </p>
+        <p className="mt-5 text-sm text-slate-400">Für Offline-Partien die installierte App einmal mit Internet öffnen, damit Seiten und Bot-Engine gespeichert werden.</p>
         <div className="mt-6 flex flex-wrap items-center gap-4">
           {selectedElo !== null ? (
-            <Link href={'/play?mode=bot&elo=' + selectedElo} className="rounded-xl bg-emerald-400 px-6 py-3 font-bold text-slate-950 transition hover:bg-emerald-300">
+            <a href={'/play?mode=bot&elo=' + selectedElo} className="rounded-xl bg-emerald-400 px-6 py-3 font-bold text-slate-950 transition hover:bg-emerald-300">
               Spiel gegen {selectedElo}-Elo-Bot starten
-            </Link>
+            </a>
           ) : <p aria-live="polite" className="text-sm text-slate-300">Wähle zuerst eine Spielstärke aus.</p>}
           <Link href="/play" className="text-sm text-slate-400 underline underline-offset-4 hover:text-white">Ohne Bot spielen</Link>
         </div>
