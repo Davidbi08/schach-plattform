@@ -55,14 +55,14 @@ export default function GameHistoryPage() {
                   <summary className="flex cursor-pointer list-none flex-wrap items-center gap-3 p-4 sm:p-5">
                     <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-800 font-semibold text-slate-300">{games.length - index}</span>
                     <span className="min-w-36 flex-1">
-                      <span className="block font-semibold">Gegner · {game.timeControl}</span>
+                      <span className="block font-semibold">Gegen {game.color === "w" ? game.blackName ?? "Gast" : game.whiteName ?? "Gast"} · {game.timeControl}</span>
                       <span className="mt-1 block text-sm text-slate-400">{dateLabel(game.playedAt)} · Du spieltest {game.color === "w" ? "Weiß" : "Schwarz"}</span>
                     </span>
                     <span className={`rounded-full px-3 py-1.5 text-sm font-semibold ${badge}`}>{game.resultText}</span>
                     <span className="ml-1 text-slate-500 transition group-open:rotate-180" aria-hidden="true">⌄</span>
                   </summary>
                   <div className="border-t border-slate-800 px-4 py-4 sm:px-5">
-                    <p className="text-sm text-slate-400">{game.reason}</p>
+                    <p className="text-sm text-slate-400">{game.reason} · Weiß: {game.whiteName ?? "Gast"} · Schwarz: {game.blackName ?? "Gast"}</p>
                     {game.moves.length === 0 ? (
                       <p className="mt-3 text-sm text-slate-500">In dieser Partie wurden keine Züge gespeichert.</p>
                     ) : (
