@@ -383,8 +383,8 @@ export default function OnlineGamePage() {
         <div className="mx-auto flex max-w-4xl flex-col gap-4 lg:flex-row lg:items-start">
           <section className="min-w-0 flex-1" aria-label="Schachpartie">
             <div className="mb-3 flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900 px-4 py-3">
-              <span className="font-semibold">{config.white ? `Gegner · ${config.blackName}` : `Du · ${config.blackName}`}</span>
-              <span className={"rounded-lg px-3 py-1.5 font-mono text-xl font-bold tabular-nums " + (game.turn() === "b" && started && !finished ? "bg-emerald-400 text-slate-950" : "bg-slate-800 text-white")}>{blackClock}</span>
+              <span className="font-semibold">{config.white ? config.blackName : config.whiteName}</span>
+              <span className={"rounded-lg px-3 py-1.5 font-mono text-xl font-bold tabular-nums " + ((config.white ? game.turn() === "b" : game.turn() === "w") && started && !finished ? "bg-emerald-400 text-slate-950" : "bg-slate-800 text-white")}>{config.white ? blackClock : whiteClock}</span>
             </div>
 
             <div className="overflow-hidden rounded-xl border-4 border-slate-800 shadow-2xl">
@@ -408,8 +408,8 @@ export default function OnlineGamePage() {
             </div>
 
             <div className="mt-3 flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900 px-4 py-3">
-              <span className="font-semibold">{config.white ? `Du · ${config.whiteName}` : `Gegner · ${config.whiteName}`}</span>
-              <span className={"rounded-lg px-3 py-1.5 font-mono text-xl font-bold tabular-nums " + (game.turn() === "w" && started && !finished ? "bg-emerald-400 text-slate-950" : "bg-slate-800 text-white")}>{whiteClock}</span>
+              <span className="font-semibold">{config.white ? config.whiteName : config.blackName}</span>
+              <span className={"rounded-lg px-3 py-1.5 font-mono text-xl font-bold tabular-nums " + ((config.white ? game.turn() === "w" : game.turn() === "b") && started && !finished ? "bg-emerald-400 text-slate-950" : "bg-slate-800 text-white")}>{config.white ? whiteClock : blackClock}</span>
             </div>
           </section>
 
