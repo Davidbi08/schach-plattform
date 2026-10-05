@@ -389,7 +389,7 @@ export default function OnlineGamePage() {
                   return (
                     <button key={square} type="button" aria-label={square + (piece ? `, ${piece.color === "w" ? "weiße" : "schwarze"} Figur` : "")} onClick={() => handleSquareClick(square)} disabled={!localTurn || !started || !opponentOnline || Boolean(finished)}
                       className={"relative flex aspect-square w-[11.5vw] max-w-[5.25rem] items-center justify-center sm:w-[4.7rem] md:w-[5.1rem] " + (light ? "bg-amber-100" : "bg-amber-700") + (selected ? " ring-4 ring-inset ring-blue-500" : "") + " disabled:cursor-default"}>
-                      {piece && <ChessPieceIcon color={piece.color} type={piece.type} />}
+                      {piece && <span className="pointer-events-none absolute inset-0 flex items-center justify-center"><ChessPieceIcon color={piece.color} type={piece.type} /></span>}
                       {target && <span className="absolute h-3 w-3 rounded-full bg-slate-950/45" />}
                     </button>
                   );
