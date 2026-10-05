@@ -10,6 +10,8 @@ export type OnlineGameRecord = {
   id: string;
   playedAt: string;
   timeControl: string;
+  whiteName?: string;
+  blackName?: string;
   color: "w" | "b";
   result: "win" | "loss" | "draw";
   resultText: string;
@@ -28,6 +30,8 @@ export function readOnlineHistory(): OnlineGameRecord[] {
       Boolean(record && typeof record === "object" &&
         typeof record.id === "string" && typeof record.playedAt === "string" &&
         typeof record.timeControl === "string" &&
+        (record.whiteName === undefined || typeof record.whiteName === "string") &&
+        (record.blackName === undefined || typeof record.blackName === "string") &&
         (record.result === "win" || record.result === "loss" || record.result === "draw") &&
         Array.isArray(record.moves)),
     );
