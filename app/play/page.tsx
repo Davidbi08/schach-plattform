@@ -17,7 +17,7 @@ function formatTime(seconds: number) {
 export default function Home() {
   const [game, setGame] = useState(() => new Chess());
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
-  const [possibleMoves, setPossibleMoves] = useState<string[]>([]);
+  const [possibleMoves, setPossibleMoves] = useState<string[]>([]); const [promotionPending, setPromotionPending] = useState<{ from: string; to: string } | null>(null);
   const [whiteTime, setWhiteTime] = useState(600);
   const [blackTime, setBlackTime] = useState(600);
   const [clockMinutes, setClockMinutes] = useState(10);
@@ -168,13 +168,13 @@ export default function Home() {
     }, 260);
   }
 
-  function handleSquareClick(square: string) {
+  function choosePromotion(piece: 'q' | 'r' | 'b' | 'n') { if (!promotionPending) return; try { const move = game.move({ from: promotionPending.from, to: promotionPending.to, promotion: piece }); animateMove(move.from, move.to); setMoves((oldMoves) => [...oldMoves, move.san]); if (clockMinutes > 0 && incrementSeconds > 0) { if (move.color === 'w') setWhiteTime((time) => time + incrementSeconds); else setBlackTime((time) => time + incrementSeconds); } setGame(new Chess(game.fen())); setSelectedSquare(null); setPossibleMoves([]); setPromotionPending(null); } catch { setPromotionPending(null); } } function handleSquareClick(square: string) {
     if (game.isGameOver() || (clockMinutes > 0 && (whiteTime === 0 || blackTime === 0)) || botThinking) return;
     if (botElo !== null && game.turn() === botColor) return;
     const piece = game.get(square as never);
     if (selectedSquare) {
       try {
-        const move = game.move({ from: selectedSquare, to: square, promotion: 'q' });
+        const movingPiece = game.get(selectedSquare as never); const promotionMove = movingPiece?.type === 'p' && ((movingPiece.color === 'w' && square[1] === '8') || (movingPiece.color === 'b' && square[1] === '1')) && game.moves({ square: selectedSquare as never, verbose: true }).some((legalMove) => legalMove.to === square); if (promotionMove) { setPromotionPending({ from: selectedSquare, to: square }); setSelectedSquare(null); setPossibleMoves([]); return; } const move = game.move({ from: selectedSquare, to: square, promotion: 'q' });
         animateMove(move.from, move.to);
         setMoves((oldMoves) => [...oldMoves, move.san]);
         if (clockMinutes > 0 && incrementSeconds > 0) {
@@ -211,7 +211,7 @@ export default function Home() {
     pendingGenerationRef.current = null;
     pendingGameRef.current = null;
     workerRef.current?.postMessage('stop');
-    setGame(new Chess());
+    setPromotionPending(null); setGame(new Chess());
     setSelectedSquare(null);
     setPossibleMoves([]);
     setWhiteTime(clockMinutes * 60);
@@ -248,7 +248,7 @@ export default function Home() {
           <p className="mt-2 text-slate-300">Schach. Community. Creator. Deine persönliche Schachreise.</p>
         </div>
         <div className="mb-4 rounded-xl border border-slate-700 bg-slate-900 px-6 py-3 text-center font-semibold" role="status">{status}</div>
-        {engineError && <p role="alert" className="mb-4 max-w-2xl rounded-xl border border-red-800 bg-red-950/50 px-4 py-3 text-sm text-red-200">{engineError}</p>}
+        {promotionPending && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-labelledby="promotion-title"><div className="w-full max-w-sm rounded-2xl border border-slate-700 bg-slate-900 p-5 shadow-2xl"><h2 id="promotion-title" className="text-xl font-bold">Wähle eine Figur</h2><p className="mt-1 text-sm text-slate-400">Dein Bauer kann umgewandelt werden in:</p><div className="mt-4 grid grid-cols-4 gap-2">{([{ piece: 'q', label: 'Dame' }, { piece: 'r', label: 'Turm' }, { piece: 'b', label: 'Läufer' }, { piece: 'n', label: 'Springer' }] as const).map(({ piece, label }) => <button key={piece} type="button" onClick={() => choosePromotion(piece)} className="flex flex-col items-center rounded-xl border border-slate-700 bg-slate-950 p-3 hover:border-emerald-400 hover:bg-slate-800"><span className={'text-4xl ' + (game.get(promotionPending.from as never)?.color === 'w' ? 'text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]' : 'text-slate-900 drop-shadow-[0_2px_2px_rgba(255,255,255,0.5)]')}>{pieceSymbols[(game.get(promotionPending.from as never)?.color ?? 'w') + piece.toUpperCase()]}</span><span className="mt-1 text-xs">{label}</span></button>)}</div><button type="button" onClick={() => setPromotionPending(null)} className="mt-4 w-full rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300 hover:bg-slate-800">Abbrechen</button></div></div>} {engineError && <p role="alert" className="mb-4 max-w-2xl rounded-xl border border-red-800 bg-red-950/50 px-4 py-3 text-sm text-red-200">{engineError}</p>}
         {botElo !== null && !engineReady && !engineError && <p className="mb-4 text-sm text-slate-400">Bot wird geladen …</p>}
         <div className="mb-4 flex w-full max-w-2xl justify-between gap-4">
           <div className="rounded-xl border border-slate-700 bg-slate-900 px-5 py-3"><div className="text-sm text-slate-400">{botElo !== null && botColor === 'w' ? 'Bot (Weiß)' : 'Weiß'}</div><div className="text-2xl font-bold">{clockMinutes === 0 ? '∞' : formatTime(whiteTime)}</div></div>
