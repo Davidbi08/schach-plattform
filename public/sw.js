@@ -57,21 +57,30 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin) return;
 
   if (request.mode === 'navigate') {
-    const path = GAME_PAGES.includes(url.pathname) ? url.pathname : url.pathname === '/' ? '/bot' : null;
-    if (!path) return;
+    if (url.pathname === '/') {
+      event.respondWith((async () => {
+        try {
+          return await fetch(request);
+        } catch {
+          return Response.redirect(new URL('/bot', self.location.origin).href, 302);
+        }
+      })());
+      return;
+    }
 
+    if (!GAME_PAGES.includes(url.pathname)) return;
     event.respondWith((async () => {
       try {
         const response = await fetch(request);
-        if (response.ok && GAME_PAGES.includes(url.pathname)) {
+        if (response.ok) {
           const pageCache = await caches.open(PAGE_CACHE);
           await pageCache.put(new URL(url.pathname, self.location.origin).href, response.clone());
         }
         return response;
       } catch {
         const pageCache = await caches.open(PAGE_CACHE);
-        const cached = await pageCache.match(new URL(path, self.location.origin).href);
-        return cached || new Response('Die Offline-Spielseite wurde noch nicht gespeichert. Bitte öffne die Bot-Auswahl einmal mit Internetverbindung.', {
+        const cached = await pageCache.match(new URL(url.pathname, self.location.origin).href);
+        return cached || new Response('Diese Offline-Seite wurde noch nicht gespeichert. Bitte öffne die Bot-Auswahl einmal mit Internetverbindung.', {
           status: 503,
           headers: { 'Content-Type': 'text/plain; charset=utf-8' },
         });
