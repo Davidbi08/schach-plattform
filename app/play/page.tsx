@@ -20,24 +20,56 @@ export default function Home() {
   const [possibleMoves, setPossibleMoves] = useState<string[]>([]);
   const [whiteTime, setWhiteTime] = useState(600);
   const [blackTime, setBlackTime] = useState(600);
+  const [clockMinutes, setClockMinutes] = useState(10);
   const [moves, setMoves] = useState<string[]>([]);
   const [botElo, setBotElo] = useState<number | null>(null);
   const [botThinking, setBotThinking] = useState(false);
   const [engineReady, setEngineReady] = useState(false);
   const [engineError, setEngineError] = useState('');
+  const [animatedMove, setAnimatedMove] = useState<{ to: string; symbol: string; color: string; dx: number; dy: number; running: boolean } | null>(null);
   const workerRef = useRef<Worker | null>(null);
   const readyRef = useRef(false);
   const requestedFenRef = useRef<string | null>(null);
   const pendingGameRef = useRef<Chess | null>(null);
   const gameGenerationRef = useRef(0);
   const pendingGenerationRef = useRef<number | null>(null);
+  const botDelayRef = useRef<number | null>(null);
+  const animationTimerRef = useRef<number | null>(null);
   const board = game.board();
+
+  function animateMove(from: string, to: string, nextGame: Chess) {
+    const piece = nextGame.get(to as never);
+    if (!piece) return;
+    if (animationTimerRef.current !== null) window.clearTimeout(animationTimerRef.current);
+    const fromFile = from.charCodeAt(0) - 97;
+    const toFile = to.charCodeAt(0) - 97;
+    const fromRow = 8 - Number(from[1]);
+    const toRow = 8 - Number(to[1]);
+    setAnimatedMove({
+      to,
+      symbol: pieceSymbols[piece.color + piece.type.toUpperCase()],
+      color: piece.color,
+      dx: toFile - fromFile,
+      dy: toRow - fromRow,
+      running: false,
+    });
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      setAnimatedMove((current) => current ? { ...current, running: true } : current);
+    }));
+    animationTimerRef.current = window.setTimeout(() => setAnimatedMove(null), 850);
+  }
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('mode') === 'bot') {
       const elo = Number(params.get('elo'));
       if ([500, 1000, 1500, 2000, 2500].includes(elo)) setBotElo(elo);
+      const minutes = Number(params.get('time'));
+      if ([0, 5, 10].includes(minutes)) {
+        setClockMinutes(minutes);
+        setWhiteTime(minutes * 60);
+        setBlackTime(minutes * 60);
+      }
     }
   }, []);
 
@@ -72,7 +104,9 @@ export default function Home() {
                 promotion: uciMove[4] ?? 'q',
               });
               setMoves((oldMoves) => [...oldMoves, move.san]);
-              setGame(new Chess(current.fen()));
+              const nextGame = new Chess(current.fen());
+              animateMove(move.from, move.to, nextGame);
+              setGame(nextGame);
             } catch {
               setEngineError('Der Bot-Zug konnte nicht übernommen werden. Bitte starte ein neues Spiel.');
             }
@@ -91,6 +125,8 @@ export default function Home() {
       setEngineError('Dein Browser konnte den Bot nicht starten. Bitte lade die Seite neu.');
     }
     return () => {
+      if (botDelayRef.current !== null) window.clearTimeout(botDelayRef.current);
+      botDelayRef.current = null;
       readyRef.current = false;
       workerRef.current = null;
       worker.terminate();
@@ -98,16 +134,17 @@ export default function Home() {
   }, [botElo]);
 
   useEffect(() => {
+    if (clockMinutes === 0) return;
     const timer = setInterval(() => {
       if (game.isGameOver()) return;
       if (game.turn() === 'w') setWhiteTime((time) => Math.max(0, time - 1));
       else setBlackTime((time) => Math.max(0, time - 1));
     }, 1000);
     return () => clearInterval(timer);
-  }, [game]);
+  }, [game, clockMinutes]);
 
   useEffect(() => {
-    if (botElo === null || game.turn() !== 'b' || game.isGameOver() || whiteTime === 0 || blackTime === 0) return;
+    if (botElo === null || game.turn() !== 'b' || game.isGameOver() || (clockMinutes > 0 && (whiteTime === 0 || blackTime === 0))) return;
     if (!readyRef.current || !workerRef.current) return;
     const fen = game.fen();
     if (requestedFenRef.current === fen) return;
@@ -118,22 +155,29 @@ export default function Home() {
     setEngineError('');
     const engine = workerRef.current;
     const targetElo = Math.max(1320, botElo);
-    engine.postMessage('setoption name UCI_LimitStrength value true');
-    engine.postMessage('setoption name UCI_Elo value ' + targetElo);
-    engine.postMessage('position fen ' + fen);
     const depth = botElo === 500 ? 1 : botElo === 1000 ? 4 : botElo === 1500 ? 8 : botElo === 2000 ? 9 : 10;
-    engine.postMessage('go depth ' + depth);
+    const thinkDelay = 800 + Math.floor(Math.random() * 900);
+    botDelayRef.current = window.setTimeout(() => {
+      botDelayRef.current = null;
+      if (pendingGenerationRef.current !== gameGenerationRef.current) return;
+      engine.postMessage('setoption name UCI_LimitStrength value true');
+      engine.postMessage('setoption name UCI_Elo value ' + targetElo);
+      engine.postMessage('position fen ' + fen);
+      engine.postMessage('go depth ' + depth);
+    }, thinkDelay);
   }, [game, botElo, whiteTime, blackTime, engineReady]);
 
   function handleSquareClick(square: string) {
-    if (game.isGameOver() || whiteTime === 0 || blackTime === 0 || botThinking) return;
+    if (game.isGameOver() || (clockMinutes > 0 && (whiteTime === 0 || blackTime === 0)) || botThinking) return;
     if (botElo !== null && game.turn() === 'b') return;
     const piece = game.get(square as never);
     if (selectedSquare) {
       try {
         const move = game.move({ from: selectedSquare, to: square, promotion: 'q' });
         setMoves((oldMoves) => [...oldMoves, move.san]);
-        setGame(new Chess(game.fen()));
+        const nextGame = new Chess(game.fen());
+        animateMove(move.from, move.to, nextGame);
+        setGame(nextGame);
         setSelectedSquare(null);
         setPossibleMoves([]);
         return;
@@ -153,6 +197,11 @@ export default function Home() {
 
   function newGame() {
     gameGenerationRef.current += 1;
+    if (botDelayRef.current !== null) window.clearTimeout(botDelayRef.current);
+    if (animationTimerRef.current !== null) window.clearTimeout(animationTimerRef.current);
+    botDelayRef.current = null;
+    animationTimerRef.current = null;
+    setAnimatedMove(null);
     requestedFenRef.current = null;
     pendingGenerationRef.current = null;
     pendingGameRef.current = null;
@@ -160,8 +209,8 @@ export default function Home() {
     setGame(new Chess());
     setSelectedSquare(null);
     setPossibleMoves([]);
-    setWhiteTime(600);
-    setBlackTime(600);
+    setWhiteTime(clockMinutes * 60);
+    setBlackTime(clockMinutes * 60);
     setMoves([]);
     setBotThinking(false);
     setEngineError('');
@@ -169,8 +218,8 @@ export default function Home() {
 
   const currentPlayer = game.turn() === 'w' ? 'Weiß' : botElo !== null ? 'Bot' : 'Schwarz';
   let status = 'Am Zug: ' + currentPlayer;
-  if (whiteTime === 0) status = '⏱️ Zeit abgelaufen – Schwarz gewinnt.';
-  else if (blackTime === 0) status = '⏱️ Zeit abgelaufen – Weiß gewinnt.';
+  if (clockMinutes > 0 && whiteTime === 0) status = '⏱️ Zeit abgelaufen – Schwarz gewinnt.';
+  else if (clockMinutes > 0 && blackTime === 0) status = '⏱️ Zeit abgelaufen – Weiß gewinnt.';
   else if (game.isCheckmate()) status = '♚ Schachmatt! ' + (game.turn() === 'w' ? 'Schwarz' : 'Weiß') + ' gewinnt.';
   else if (game.isStalemate()) status = '🤝 Patt – Unentschieden.';
   else if (game.isDraw()) status = '🤝 Remis – Unentschieden.';
@@ -193,12 +242,12 @@ export default function Home() {
         {engineError && <p role="alert" className="mb-4 max-w-2xl rounded-xl border border-red-800 bg-red-950/50 px-4 py-3 text-sm text-red-200">{engineError}</p>}
         {botElo !== null && !engineReady && !engineError && <p className="mb-4 text-sm text-slate-400">Bot wird geladen …</p>}
         <div className="mb-4 flex w-full max-w-2xl justify-between gap-4">
-          <div className="rounded-xl border border-slate-700 bg-slate-900 px-5 py-3"><div className="text-sm text-slate-400">Weiß</div><div className="text-2xl font-bold">{formatTime(whiteTime)}</div></div>
-          <div className="rounded-xl border border-slate-700 bg-slate-900 px-5 py-3 text-right"><div className="text-sm text-slate-400">{botElo !== null ? 'Bot (Schwarz)' : 'Schwarz'}</div><div className="text-2xl font-bold">{formatTime(blackTime)}</div></div>
+          <div className="rounded-xl border border-slate-700 bg-slate-900 px-5 py-3"><div className="text-sm text-slate-400">Weiß</div><div className="text-2xl font-bold">{clockMinutes === 0 ? '∞' : formatTime(whiteTime)}</div></div>
+          <div className="rounded-xl border border-slate-700 bg-slate-900 px-5 py-3 text-right"><div className="text-sm text-slate-400">{botElo !== null ? 'Bot (Schwarz)' : 'Schwarz'}</div><div className="text-2xl font-bold">{clockMinutes === 0 ? '∞' : formatTime(blackTime)}</div></div>
         </div>
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
           <div className="overflow-hidden rounded-xl border-4 border-slate-700 shadow-2xl">
-            <div className="grid grid-cols-8">
+            <div className="relative grid grid-cols-8">
               {board.map((row, rowIndex) => row.map((piece, colIndex) => {
                 const square = String.fromCharCode(97 + colIndex) + (8 - rowIndex);
                 const isLight = (rowIndex + colIndex) % 2 === 0;
@@ -207,12 +256,25 @@ export default function Home() {
                     disabled={botThinking || (botElo !== null && game.turn() === 'b')}
                     onClick={() => handleSquareClick(square)}
                     className={'relative flex aspect-square w-11 items-center justify-center text-3xl disabled:cursor-wait sm:w-16 sm:text-5xl md:w-20 md:text-6xl ' + (isLight ? 'bg-amber-100' : 'bg-amber-700') + (selectedSquare === square ? ' ring-4 ring-blue-500 ring-inset' : '')}>
-                    {piece && <span className={piece.color === 'w' ? 'text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]' : 'text-slate-900 drop-shadow-[0_2px_2px_rgba(255,255,255,0.5)]'}>{pieceSymbols[piece.color + piece.type.toUpperCase()]}</span>}
+                    {piece && <span className={(piece.color === 'w' ? 'text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]' : 'text-slate-900 drop-shadow-[0_2px_2px_rgba(255,255,255,0.5)]') + (animatedMove?.to === square ? ' opacity-0' : '')}>{pieceSymbols[piece.color + piece.type.toUpperCase()]}</span>}
                     {possibleMoves.includes(square) && <span className="absolute h-3 w-3 rounded-full bg-slate-800/60" />}
                   </button>
                 );
               }))}
             </div>
+            {animatedMove && (
+              <div className="pointer-events-none absolute inset-0 grid grid-cols-8 grid-rows-8" aria-hidden="true">
+                <span
+                  className={'z-10 flex items-center justify-center text-3xl sm:text-5xl md:text-6xl ' + (animatedMove.color === 'w' ? 'text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]' : 'text-slate-900 drop-shadow-[0_2px_2px_rgba(255,255,255,0.5)]')}
+                  style={{
+                    gridColumn: animatedMove.to.charCodeAt(0) - 96,
+                    gridRow: 9 - Number(animatedMove.to[1]),
+                    transform: animatedMove.running ? 'translate(0, 0)' : 'translate(' + (-animatedMove.dx * 100) + '%, ' + (-animatedMove.dy * 100) + '%)',
+                    transition: 'transform 750ms cubic-bezier(0.22, 0.75, 0.3, 1)',
+                  }}
+                >{animatedMove.symbol}</span>
+              </div>
+            )}
           </div>
           <div className="w-full rounded-xl border border-slate-700 bg-slate-900 p-4 lg:w-64">
             <h2 className="mb-3 text-lg font-bold">Zugliste</h2>
@@ -224,7 +286,7 @@ export default function Home() {
           </div>
         </div>
         <button type="button" onClick={newGame} className="mt-6 rounded-xl bg-white px-6 py-3 font-semibold text-slate-950">🔄 Neues Spiel</button>
-        <p className="mt-5 max-w-md text-center text-sm text-slate-400">10 Minuten pro Spieler · Wähle eine Figur und anschließend ihr Zielfeld.</p>
+        <p className="mt-5 max-w-md text-center text-sm text-slate-400">{clockMinutes === 0 ? 'Ohne Zeitbegrenzung' : clockMinutes + ' Minuten pro Spieler'} · Wähle eine Figur und anschließend ihr Zielfeld.</p>
       </div>
     </main>
   );
