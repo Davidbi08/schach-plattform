@@ -12,7 +12,6 @@ export default function Home() {
     async function loadProfile() {
       try {
         const supabase = createClient();
-
         const {
           data: { user },
         } = await supabase.auth.getUser();
@@ -40,6 +39,18 @@ export default function Home() {
     void loadProfile();
   }, []);
 
+  async function handleLogout() {
+    const supabase = createClient();
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      console.error("Abmelden fehlgeschlagen:", error);
+      return;
+    }
+
+    window.location.assign("/login");
+  }
+
   return (
     <main className="min-h-screen bg-slate-950 text-white">
       <div className="mx-auto max-w-6xl px-6 py-12">
@@ -60,6 +71,13 @@ export default function Home() {
               <p className="mt-4 max-w-2xl text-lg text-slate-300">
                 Willkommen auf deiner Schachplattform.
               </p>
+              <button
+                type="button"
+                onClick={() => void handleLogout()}
+                className="mt-6 rounded-xl border border-slate-700 px-5 py-3 font-semibold text-slate-100 transition hover:bg-slate-800"
+              >
+                Ausloggen
+              </button>
             </>
           ) : (
             <>
