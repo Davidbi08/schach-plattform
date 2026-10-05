@@ -7,6 +7,8 @@ const sections: { title?: string; items: MenuItem[] }[] = [
   { items: [{ label: "Home", icon: "⌂", href: "/" }] },
   { title: "Spielen", items: [
     { label: "Schach spielen", icon: "♟", href: "/play" },
+    { label: "Online spielen", icon: "◉", href: "/online" },
+    { label: "Partieverlauf", icon: "▤", href: "/partien" },
     { label: "Gegen Bot spielen", icon: "🤖", href: "/bot" },
   ] },
   { items: [{ label: "Analyse", icon: "⌕", href: "/analyse" }] },
