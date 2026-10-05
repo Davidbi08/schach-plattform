@@ -8,8 +8,8 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "ChessForge – Schach spielen und lernen",
-  description: "Spiele Schach, trainiere und werde Teil der ChessForge-Community.",
+  title: "Schach spielen und analysieren",
+  description: "Spiele Schach, trainiere und werde Teil der Schach-Community.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
