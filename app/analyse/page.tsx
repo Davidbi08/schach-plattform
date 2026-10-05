@@ -15,6 +15,7 @@ export default function AnalysePage() {
   const [positions, setPositions] = useState<string[]>([START_FEN]);
   const [moveIndex, setMoveIndex] = useState(0);
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
+  const [promotionPending, setPromotionPending] = useState<{ from: Square; to: Square } | null>(null);
   const [message, setMessage] = useState("");
   const [engineReady, setEngineReady] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
@@ -88,6 +89,7 @@ export default function AnalysePage() {
       setPositions(nextPositions);
       setMoveIndex(sanMoves.length);
       setSelectedSquare(null);
+      setPromotionPending(null);
       setEvaluation(null);
       setMessage(sanMoves.length ? sanMoves.length + " Züge geladen." : "Partie geladen. Noch keine Züge gefunden.");
       setEngineError("");
@@ -104,9 +106,21 @@ export default function AnalysePage() {
 
   function playMove(from: Square, to: Square) {
     if (game.isGameOver()) return false;
+    const movingPiece = game.get(from);
+    const isLegalMove = game.moves({ square: from, verbose: true }).some((move) => move.to === to);
+    if (!isLegalMove) return false;
+    const reachesLastRank = movingPiece?.type === "p" && ((movingPiece.color === "w" && to[1] === "8") || (movingPiece.color === "b" && to[1] === "1"));
+    if (reachesLastRank) {
+      setPromotionPending({ from, to });
+      return true;
+    }
+    return commitMove(from, to);
+  }
+
+  function commitMove(from: Square, to: Square, promotion?: "q" | "r" | "b" | "n") {
     const next = new Chess(game.fen());
     try {
-      const played = next.move({ from, to, promotion: "q" });
+      const played = next.move({ from, to, promotion });
       const nextPositions = positions.slice(0, moveIndex + 1);
       nextPositions.push(next.fen());
       const nextMoves = moves.slice(0, moveIndex);
@@ -116,6 +130,7 @@ export default function AnalysePage() {
       setMoveIndex(nextMoves.length);
       setPgn(nextMoves.map((san, index) => (index % 2 === 0 ? Math.floor(index / 2) + 1 + ". " : "") + san).join(" "));
       setSelectedSquare(null);
+      setPromotionPending(null);
       setEvaluation(null);
       setAnalyzing(false);
       workerRef.current?.postMessage("stop");
@@ -124,6 +139,11 @@ export default function AnalysePage() {
     } catch {
       return false;
     }
+  }
+
+  function choosePromotion(piece: "q" | "r" | "b" | "n") {
+    if (!promotionPending) return;
+    commitMove(promotionPending.from, promotionPending.to, piece);
   }
 
   function handleSquareClick(square: Square) {
@@ -154,6 +174,7 @@ export default function AnalysePage() {
     setPositions([START_FEN]);
     setMoveIndex(0);
     setSelectedSquare(null);
+    setPromotionPending(null);
     setEvaluation(null);
     setMessage("Neue Partie bereit. Ziehe eine weiße Figur oder tippe zuerst auf sie.");
     setEngineError("");
@@ -173,6 +194,7 @@ export default function AnalysePage() {
     worker.postMessage("go depth 15");
   }
 
+  const promotionColor = promotionPending ? game.get(promotionPending.from)?.color ?? "w" : "w";
   const scoreLabel = evaluation
     ? evaluation.score.startsWith("Matt")
       ? evaluation.score
@@ -181,6 +203,7 @@ export default function AnalysePage() {
 
   return <main className="min-h-screen bg-slate-950 px-4 py-8 text-white sm:px-6">
     <div className="mx-auto max-w-7xl">
+      {promotionPending && <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/80 p-4" role="dialog" aria-modal="true" aria-labelledby="analysis-promotion-title"><div className="w-full max-w-sm rounded-2xl border border-slate-700 bg-slate-900 p-5 shadow-2xl"><h2 id="analysis-promotion-title" className="text-xl font-bold">Bauernumwandlung</h2><p className="mt-1 text-sm text-slate-400">Welche Figur möchtest du wählen?</p><div className="mt-4 grid grid-cols-4 gap-2">{(["q", "r", "b", "n"] as const).map((piece) => <button key={piece} type="button" onClick={() => choosePromotion(piece)} className="flex flex-col items-center rounded-xl border border-slate-700 bg-slate-950 p-3 hover:border-emerald-400 hover:bg-slate-800"><span className={"text-4xl " + (promotionColor === "w" ? "text-white drop-shadow-[0_2px_2px_rgba(15,23,42,0.95)]" : "text-slate-950 drop-shadow-[0_1px_1px_rgba(255,255,255,0.85)]")}>{PIECES[promotionColor + piece.toUpperCase()]}</span><span className="mt-1 text-xs">{{ q: "Dame", r: "Turm", b: "Läufer", n: "Springer" }[piece]}</span></button>)}</div><button type="button" onClick={() => setPromotionPending(null)} className="mt-4 w-full rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300 hover:bg-slate-800">Abbrechen</button></div></div>}
       <header className="mb-7">
         <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-300">Partie verstehen · besser spielen</p>
         <h1 className="mt-2 text-3xl font-bold sm:text-4xl">Analyse</h1>
