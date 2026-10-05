@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Chess } from 'chess.js';
+import { getMaterialAdvantage } from '@/lib/chess/material';
 
 const pieceSymbols: Record<string, string> = {
   wK: '♔', wQ: '♕', wR: '♖', wB: '♗', wN: '♘', wP: '♙',
@@ -222,6 +223,15 @@ export default function Home() {
   }
 
   const userColor = botColor === 'w' ? 'b' : 'w';
+  const materialAdvantage = getMaterialAdvantage(game);
+  const materialScore = botElo !== null
+    ? (userColor === 'w' ? materialAdvantage : -materialAdvantage)
+    : materialAdvantage;
+  const materialLeader = materialScore === 0
+    ? 'Material ausgeglichen'
+    : botElo !== null
+      ? (materialScore > 0 ? 'Du' : 'Bot') + ' hat ' + Math.abs(materialScore) + ' Punkt' + (Math.abs(materialScore) === 1 ? '' : 'e') + ' mehr'
+      : (materialScore > 0 ? 'Weiß' : 'Schwarz') + ' hat ' + Math.abs(materialScore) + ' Punkt' + (Math.abs(materialScore) === 1 ? '' : 'e') + ' mehr';
   const currentPlayer = botElo !== null
     ? game.turn() === botColor ? 'Bot' : 'Du (' + (userColor === 'w' ? 'Weiß' : 'Schwarz') + ')'
     : game.turn() === 'w' ? 'Weiß' : 'Schwarz';
@@ -253,6 +263,10 @@ export default function Home() {
         <div className="mb-4 flex w-full max-w-2xl justify-between gap-4">
           <div className="rounded-xl border border-slate-700 bg-slate-900 px-5 py-3"><div className="text-sm text-slate-400">{botElo !== null && botColor === 'w' ? 'Bot (Weiß)' : 'Weiß'}</div><div className="text-2xl font-bold">{clockMinutes === 0 ? '∞' : formatTime(whiteTime)}</div></div>
           <div className="rounded-xl border border-slate-700 bg-slate-900 px-5 py-3 text-right"><div className="text-sm text-slate-400">{botElo !== null && botColor === 'b' ? 'Bot (Schwarz)' : 'Schwarz'}</div><div className="text-2xl font-bold">{clockMinutes === 0 ? '∞' : formatTime(blackTime)}</div></div>
+        </div>
+        <div className="mb-4 flex w-full max-w-2xl items-center justify-between rounded-xl border border-slate-700 bg-slate-900 px-5 py-3" aria-live="polite" aria-label={'Materialbilanz: ' + materialLeader}>
+          <div><div className="text-sm text-slate-400">Figurenpunkte</div><div className="text-sm font-medium">{materialLeader}</div></div>
+          <div className={'text-2xl font-bold tabular-nums ' + (materialScore > 0 ? 'text-emerald-300' : materialScore < 0 ? 'text-rose-300' : 'text-slate-200')}>{materialScore > 0 ? '+' : materialScore < 0 ? '−' : ''}{Math.abs(materialScore)}</div>
         </div>
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
           <div className="overflow-hidden rounded-xl border-4 border-slate-700 shadow-2xl">
