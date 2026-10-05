@@ -1,0 +1,168 @@
+"use client";
+
+import Link from "next/link";
+import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import type { RealtimeChannel } from "@supabase/supabase-js";
+import { createClient } from "@/lib/supabase/client";
+import { createPlayerId, getRoomId, ONLINE_TIME_CONTROLS, type TimeControl } from "./protocol";
+
+type LobbyPlayer = { playerId: string; queuedAt: number };
+
+export default function OnlinePage() {
+  const [selectedControl, setSelectedControl] = useState(ONLINE_TIME_CONTROLS[2]);
+  const [searching, setSearching] = useState(false);
+  const [queueCount, setQueueCount] = useState(0);
+  const [message, setMessage] = useState("");
+  const channelRef = useRef<RealtimeChannel | null>(null);
+  const playerIdRef = useRef<string | null>(null);
+  const matchedRef = useRef(false);
+  const router = useRouter();
+
+  function openMatch(whiteId: string, blackId: string, control: TimeControl) {
+    if (matchedRef.current) return;
+    matchedRef.current = true;
+    const playerId = playerIdRef.current;
+    if (!playerId) return;
+    const opponentId = playerId === whiteId ? blackId : whiteId;
+    const params = new URLSearchParams({
+      room: getRoomId(whiteId, blackId),
+      player: playerId,
+      opponent: opponentId,
+      white: String(playerId === whiteId),
+      initial: String(control.initialSeconds),
+      increment: String(control.incrementSeconds),
+    });
+    setMessage("Gegner gefunden. Die Partie wird geöffnet …");
+    const channel = channelRef.current;
+    channelRef.current = null;
+    if (channel) void createClient().removeChannel(channel);
+    router.push("/online/partie?" + params.toString());
+  }
+
+  async function startSearch() {
+    if (searching) return;
+    setMessage("");
+    setQueueCount(1);
+    setSearching(true);
+    matchedRef.current = false;
+
+    try {
+      const supabase = createClient();
+      const playerId = createPlayerId();
+      playerIdRef.current = playerId;
+      const channel = supabase.channel("chess-lobby-" + selectedControl.id, {
+        config: { presence: { key: playerId }, broadcast: { self: false } },
+      });
+      channelRef.current = channel;
+
+      channel.on("presence", { event: "sync" }, () => {
+        const allPlayers = Object.values(channel.presenceState())
+          .flat()
+          .map((presence) => presence as unknown as LobbyPlayer)
+          .filter((presence) => typeof presence.playerId === "string" && typeof presence.queuedAt === "number")
+          .filter((presence) => Date.now() - presence.queuedAt < 120_000)
+          .sort((first, second) => first.queuedAt - second.queuedAt || first.playerId.localeCompare(second.playerId));
+
+        setQueueCount(Math.max(1, allPlayers.length));
+        if (allPlayers.length < 2 || matchedRef.current) return;
+
+        const whitePlayer = allPlayers[0];
+        const blackPlayer = allPlayers[1];
+        if (playerId === whitePlayer.playerId || playerId === blackPlayer.playerId) {
+          openMatch(whitePlayer.playerId, blackPlayer.playerId, selectedControl);
+        }
+      });
+
+      channel.subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          void channel.track({ playerId, queuedAt: Date.now() });
+        } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+          setSearching(false);
+          setMessage("Die Online-Verbindung konnte nicht aufgebaut werden. Bitte prüfe deine Internetverbindung und versuche es erneut.");
+        }
+      });
+    } catch (error) {
+      console.error("Online-Suche konnte nicht gestartet werden:", error);
+      setSearching(false);
+      setMessage("Die Online-Suche ist gerade nicht verfügbar. Bitte versuche es später erneut.");
+    }
+  }
+
+  async function cancelSearch() {
+    matchedRef.current = true;
+    const channel = channelRef.current;
+    channelRef.current = null;
+    playerIdRef.current = null;
+    setSearching(false);
+    setQueueCount(0);
+    setMessage("");
+    if (channel) await createClient().removeChannel(channel);
+  }
+
+  return (
+    <main className="min-h-screen bg-slate-950 px-4 py-8 text-white sm:px-8 sm:py-12">
+      <div className="mx-auto max-w-5xl">
+        <Link href="/" className="text-sm text-slate-400 underline underline-offset-4 hover:text-white">← Zur Startseite</Link>
+
+        <header className="mt-8 max-w-3xl">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-300">Spielen · Online</p>
+          <h1 className="mt-3 text-4xl font-bold sm:text-5xl">Finde einen Gegner</h1>
+          <p className="mt-4 text-lg leading-7 text-slate-300">Wähle deine Bedenkzeit und wir suchen jemanden, der dieselbe Partie spielen möchte.</p>
+        </header>
+
+        <section className="mt-8 rounded-3xl border border-slate-800 bg-slate-900/70 p-5 sm:p-8" aria-labelledby="clock-heading">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 id="clock-heading" className="text-2xl font-bold">Bedenkzeit</h2>
+              <p className="mt-1 text-sm text-slate-400">Die zweite Zahl gibt die Sekunden pro Zug an.</p>
+            </div>
+            <span className="rounded-full border border-slate-700 bg-slate-950 px-3 py-1 text-sm text-slate-300">Ungewertete Partie</span>
+          </div>
+
+          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {ONLINE_TIME_CONTROLS.map((control) => {
+              const selected = selectedControl.id === control.id;
+              return (
+                <button
+                  key={control.id}
+                  type="button"
+                  aria-pressed={selected}
+                  disabled={searching}
+                  onClick={() => setSelectedControl(control)}
+                  className={"rounded-2xl border p-4 text-left transition disabled:cursor-not-allowed disabled:opacity-60 " + (selected ? "border-emerald-400 bg-emerald-950/60 ring-2 ring-emerald-400/30" : "border-slate-700 bg-slate-950 hover:border-slate-500")}
+                >
+                  <span className="block text-xl font-bold">{control.label}</span>
+                  <span className="mt-1 block text-sm text-slate-400">{control.group}{control.incrementSeconds ? ` · +${control.incrementSeconds} Sek.` : ""}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {!searching ? (
+            <button type="button" onClick={() => void startSearch()} className="mt-7 min-h-14 w-full rounded-2xl bg-emerald-400 px-6 py-4 text-lg font-bold text-slate-950 transition hover:bg-emerald-300 sm:w-auto sm:min-w-72">
+              Gegner suchen
+            </button>
+          ) : (
+            <div className="mt-7 flex flex-wrap items-center gap-4 rounded-2xl border border-emerald-900 bg-emerald-950/40 p-4" role="status" aria-live="polite">
+              <span className="flex h-10 w-10 animate-pulse items-center justify-center rounded-full bg-emerald-400/15 text-xl text-emerald-300">♟</span>
+              <div className="min-w-48 flex-1">
+                <p className="font-semibold">Suche nach einem Gegner …</p>
+                <p className="mt-1 text-sm text-slate-400">{queueCount > 1 ? `${queueCount - 1} weitere Person${queueCount === 2 ? "" : "en"} in dieser Bedenkzeit` : "Du bist in der Warteschlange."}</p>
+              </div>
+              <button type="button" onClick={() => void cancelSearch()} className="rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:bg-slate-800">Suche abbrechen</button>
+            </div>
+          )}
+
+          {message && <p className="mt-4 rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-slate-300" role="status">{message}</p>}
+        </section>
+
+        <section className="mt-6 grid gap-4 md:grid-cols-3" aria-label="So funktionieren Online-Partien">
+          <article className="rounded-2xl border border-slate-800 bg-slate-900/50 p-5"><span className="text-2xl">⚡</span><h2 className="mt-3 font-bold">Gleiche Bedenkzeit</h2><p className="mt-2 text-sm leading-6 text-slate-400">Du wirst mit jemandem zusammengebracht, der dieselbe Zeitkontrolle gewählt hat.</p></article>
+          <article className="rounded-2xl border border-slate-800 bg-slate-900/50 p-5"><span className="text-2xl">♟</span><h2 className="mt-3 font-bold">Weiß oder Schwarz</h2><p className="mt-2 text-sm leading-6 text-slate-400">Die Farben werden beim Start der Partie festgelegt.</p></article>
+          <article className="rounded-2xl border border-slate-800 bg-slate-900/50 p-5"><span className="text-2xl">🤝</span><h2 className="mt-3 font-bold">Faires Spielen</h2><p className="mt-2 text-sm leading-6 text-slate-400">Partien sind vorerst zum Ausprobieren da und verändern keine Wertung.</p></article>
+        </section>
+      </div>
+    </main>
+  );
+}
