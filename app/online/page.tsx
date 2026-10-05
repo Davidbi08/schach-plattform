@@ -53,7 +53,9 @@ export default function OnlinePage() {
       const playerId = createPlayerId();
       playerIdRef.current = playerId;
       let username = "";
-      try { const { data: { user } } = await supabase.auth.getUser(); if (user) { const { data } = await supabase.from("profiles").select("username").eq("id", user.id).maybeSingle(); if (typeof data?.username === "string") username = data.username.trim().slice(0, 20); } } catch { /* profile is optional */ }
+      let authUser: Awaited<ReturnType<typeof supabase.auth.getUser>>["data"]["user"] | null = null;
+      try { const { data: { user } } = await supabase.auth.getUser(); if (user) { authUser = user; const { data } = await supabase.from("profiles").select("username").eq("id", user.id).maybeSingle(); if (typeof data?.username === "string") username = data.username.trim().slice(0, 20); } } catch { /* profile is optional */ }
+      if (!username && authUser) { const metadata = authUser.user_metadata ?? {}; const profileName = [metadata.username, metadata.display_name, metadata.full_name, metadata.name].find((value) => typeof value === "string" && value.trim()); if (typeof profileName === "string") username = profileName.trim().slice(0, 20); }
       if (!username) username = "Gast-" + playerId.slice(0, 4).toUpperCase();
       usernameRef.current = username;
       const channel = supabase.channel("chess-lobby-" + selectedControl.id, {
