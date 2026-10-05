@@ -198,7 +198,7 @@ export default function AnalysePage() {
           <p className="mb-3 text-center text-sm text-slate-400">{game.isGameOver() ? "Partie beendet" : "Am Zug: " + (game.turn() === "w" ? "Weiß" : "Schwarz") + " · Ziehe eine Figur oder wähle Start- und Zielfeld."}</p>
           <div className="mx-auto grid w-full max-w-[620px] grid-cols-[1.25rem_minmax(0,1fr)] grid-rows-[minmax(0,1fr)_1.25rem]">
             <div className="grid grid-rows-8 text-center text-xs text-slate-400">{Array.from({ length: 8 }, (_, index) => <span key={index} className="flex items-center justify-center">{8 - index}</span>)}</div>
-            <div className="grid aspect-square w-full grid-cols-8 overflow-hidden rounded-lg border border-slate-700">
+            <div className="grid aspect-square w-full grid-cols-8 grid-rows-8 overflow-hidden rounded-lg border border-slate-700">
               {board.flatMap((row, rowIndex) => row.map((piece, colIndex) => {
                 const light = (rowIndex + colIndex) % 2 === 0;
                 const square = (String.fromCharCode(97 + colIndex) + (8 - rowIndex)) as Square;
