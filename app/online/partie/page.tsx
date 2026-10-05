@@ -129,7 +129,7 @@ export default function OnlineGamePage() {
       void channel.send({ type: "broadcast", event: "snapshot-request", payload: { by: config.player } });
     };
 
-    channel.on("presence", { event: "sync" }, () => {
+    const reconcilePlayers = () => {
       if (!active) return;
       const connectedPlayers = Object.values(channel.presenceState())
         .flat()
@@ -143,7 +143,14 @@ export default function OnlineGamePage() {
         setStarted(true);
       }
       if (bothConnected) askForSnapshot();
-    });
+    };
+
+    // The initial/full state arrives as `sync`; subsequent arrivals and
+    // disconnects are `join`/`leave`. Reconcile all three so the first player
+    // does not remain stuck waiting after the opponent has joined.
+    channel.on("presence", { event: "sync" }, reconcilePlayers);
+    channel.on("presence", { event: "join" }, reconcilePlayers);
+    channel.on("presence", { event: "leave" }, reconcilePlayers);
 
     channel.on("broadcast", { event: "snapshot-request" }, ({ payload }) => {
       if (!active || payload?.by === config.player) return;
@@ -378,7 +385,7 @@ export default function OnlineGamePage() {
             </div>
 
             <div className="overflow-hidden rounded-xl border-4 border-slate-800 shadow-2xl">
-              <div className="grid grid-cols-8">
+              <div className="grid aspect-square grid-cols-8 grid-rows-8">
                 {shownRows.map((row, rowIndex) => row.map((piece, colIndex) => {
                   const square = (!config.white
                     ? String.fromCharCode(104 - colIndex) + (rowIndex + 1)
@@ -388,7 +395,7 @@ export default function OnlineGamePage() {
                   const target = possibleMoves.includes(square);
                   return (
                     <button key={square} type="button" aria-label={square + (piece ? `, ${piece.color === "w" ? "weiße" : "schwarze"} Figur` : "")} onClick={() => handleSquareClick(square)} disabled={!localTurn || !started || !opponentOnline || Boolean(finished)}
-                      className={"relative flex aspect-square w-[11.5vw] max-w-[5.25rem] items-center justify-center sm:w-[4.7rem] md:w-[5.1rem] " + (light ? "bg-amber-100" : "bg-amber-700") + (selected ? " ring-4 ring-inset ring-blue-500" : "") + " disabled:cursor-default"}>
+                      className={"relative flex h-full w-full items-center justify-center p-0 " + (light ? "bg-amber-100" : "bg-amber-700") + (selected ? " ring-4 ring-inset ring-blue-500" : "") + " disabled:cursor-default"}>
                       {piece && <span className="pointer-events-none absolute inset-0 flex items-center justify-center"><ChessPieceIcon color={piece.color} type={piece.type} /></span>}
                       {target && <span className="absolute h-3 w-3 rounded-full bg-slate-950/45" />}
                     </button>
