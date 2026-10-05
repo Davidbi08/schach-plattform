@@ -224,15 +224,15 @@ export default function Home() {
   const materialLeader = materialScore === 0
     ? 'Material ausgeglichen'
     : botElo !== null
-      ? (materialScore > 0 ? 'Du' : 'Bot') + ' hat ' + Math.abs(materialScore) + ' Punkt' + (Math.abs(materialScore) === 1 ? '' : 'e') + ' mehr'
+      ? (materialScore > 0 ? playerName : 'Bot') + ' hat ' + Math.abs(materialScore) + ' Punkt' + (Math.abs(materialScore) === 1 ? '' : 'e') + ' mehr'
       : (materialScore > 0 ? 'Weiß' : 'Schwarz') + ' hat ' + Math.abs(materialScore) + ' Punkt' + (Math.abs(materialScore) === 1 ? '' : 'e') + ' mehr';
   const currentPlayer = botElo !== null
-    ? game.turn() === botColor ? 'Bot' : 'Du (' + (userColor === 'w' ? 'Weiß' : 'Schwarz') + ')'
+    ? game.turn() === botColor ? 'Bot' : playerName
     : game.turn() === 'w' ? 'Weiß' : 'Schwarz';
   let status = 'Am Zug: ' + currentPlayer;
-  if (clockMinutes > 0 && whiteTime === 0) status = '⏱️ Zeit abgelaufen – ' + (botElo !== null ? (botColor === 'b' ? 'Bot' : 'Du') : 'Schwarz') + ' gewinnt.';
-  else if (clockMinutes > 0 && blackTime === 0) status = '⏱️ Zeit abgelaufen – ' + (botElo !== null ? (botColor === 'w' ? 'Bot' : 'Du') : 'Weiß') + ' gewinnt.';
-  else if (game.isCheckmate()) status = '♚ Schachmatt! ' + (game.turn() === 'w' ? 'Schwarz' : 'Weiß') + ' gewinnt.';
+  if (clockMinutes > 0 && whiteTime === 0) status = '⏱️ Zeit abgelaufen – ' + (botElo !== null ? (botColor === 'b' ? 'Bot' : playerName) : 'Schwarz') + ' gewinnt.';
+  else if (clockMinutes > 0 && blackTime === 0) status = '⏱️ Zeit abgelaufen – ' + (botElo !== null ? (botColor === 'w' ? 'Bot' : playerName) : 'Weiß') + ' gewinnt.';
+  else if (game.isCheckmate()) status = '♚ Schachmatt! ' + (game.turn() === 'w' ? blackPlayerName : whitePlayerName) + ' gewinnt.';
   else if (game.isStalemate()) status = '🤝 Patt – Unentschieden.';
   else if (game.isDraw()) status = '🤝 Remis – Unentschieden.';
   else if (botThinking) status = '🤖 Der Bot denkt nach …';
@@ -244,7 +244,7 @@ export default function Home() {
       <div className="mx-auto flex min-h-screen max-w-6xl flex-col items-center px-4 py-10">
         <div className="mb-6 w-full max-w-2xl">
           <a href="/" className="text-sm text-slate-300 underline underline-offset-4 hover:text-white">← Zur Startseite</a>
-          {botElo !== null && <p className="mt-3 text-sm text-emerald-300">Spiel gegen den {botElo}-Elo-Bot · Du spielst {userColor === 'w' ? 'Weiß' : 'Schwarz'} · {clockMinutes === 0 ? 'ohne Zeit' : clockMinutes + '+' + incrementSeconds}</p>}
+          {botElo !== null && <p className="mt-3 text-sm text-emerald-300">Spiel gegen den {botElo}-Elo-Bot · {playerName} · {clockMinutes === 0 ? 'ohne Zeit' : clockMinutes + '+' + incrementSeconds}</p>}
         </div>
         <div className="mb-6 text-center">
           <div className="mb-2 text-5xl">♟️</div>
