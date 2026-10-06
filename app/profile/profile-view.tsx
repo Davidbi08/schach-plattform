@@ -89,7 +89,7 @@ export function PlayerProfileView({ requestedUsername }: { requestedUsername?: s
           <div className="mb-3 flex items-end justify-between gap-3">
             <div>
               <h2 id="ratings-heading" className="text-2xl font-bold">Online-Elo</h2>
-              <p className="mt-1 text-sm text-slate-400">Startwert: 1200 · Änderungen richten sich nach der Wertung beider Spieler.</p>
+              <p className="mt-1 text-sm text-slate-400">Der Startwert beruht auf deiner Selbsteinschätzung. In den ersten fünf gewerteten Partien je Modus ist die Wertung vorläufig und reagiert stärker.</p>
             </div>
             <Link href="/online" className="text-sm font-semibold text-emerald-300 underline underline-offset-4">Online spielen</Link>
           </div>
@@ -109,7 +109,7 @@ export function PlayerProfileView({ requestedUsername }: { requestedUsername?: s
                     <h3 className="text-lg font-semibold">{modeLabels[rating.game_mode]}</h3>
                     <p className="text-3xl font-bold tabular-nums text-emerald-300">{rating.rating}</p>
                   </div>
-                  <p className="mt-3 text-sm text-slate-400">{rating.rated_games} gewertete Partien</p>
+                  <p className="mt-3 text-sm text-slate-400">{rating.rated_games < 5 ? `Vorläufig · noch ${5 - rating.rated_games} Partien bis zur stabileren Wertung` : "Einstufungsphase abgeschlossen"}}</p>
                   <p className="mt-1 text-sm text-slate-400">{rating.wins} Siege · {rating.draws} Remis · {rating.losses} Niederlagen</p>
                 </article>
               ))}

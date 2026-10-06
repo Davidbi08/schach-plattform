@@ -1,3 +1,4 @@
+import RatingPlacementGate from "./rating-placement-gate";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import OfflineRegistration from "./offline-registration";
@@ -18,6 +19,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col">
         <OfflineRegistration />
         <AppNavigation />
+                <RatingPlacementGate />>
         <div className="min-h-screen pt-14 md:pt-0 md:pl-72">{children}</div>
       </body>
     </html>
