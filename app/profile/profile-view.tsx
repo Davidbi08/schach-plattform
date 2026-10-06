@@ -79,9 +79,9 @@ export function PlayerProfileView({ requestedUsername }: { requestedUsername?: s
     <main className="min-h-screen bg-slate-950 px-4 py-8 text-white sm:px-8 sm:py-12">
       <div className="mx-auto max-w-4xl">
         <Link href="/" className="text-sm text-slate-400 underline underline-offset-4 hover:text-white">← Zur Startseite</Link>
-        <header className="mt-8 rounded-3xl border border-slate-800 bg-gradient-to-br from-emerald-950/70 to-slate-900 p-6 sm:p-9">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-300">Spielerprofil</p>
-          <h1 className="mt-3 break-all text-4xl font-bold">{username || "Dein Profil"}</h1>
+        <header className="mt-8 border-b border-slate-800 pb-7">
+          <p className="text-sm font-medium text-emerald-400">SPIELERPROFIL</p>
+          <h1 className="mt-2 break-all text-4xl font-semibold tracking-tight">{username || "Dein Profil"}</h1>
           <p className="mt-3 text-slate-300">Online-Elo nach Bedenkzeit. Jede Zeitkontrolle hat eine eigene Wertung.</p>
         </header>
 
@@ -104,12 +104,12 @@ export function PlayerProfileView({ requestedUsername }: { requestedUsername?: s
           ) : (
             <div className="grid gap-3 sm:grid-cols-2">
               {ratings.map((rating) => (
-                <article key={rating.game_mode} className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+                <article key={rating.game_mode} className="rounded-xl border border-slate-800 bg-slate-900/70 p-5">
                   <div className="flex items-center justify-between gap-4">
                     <h3 className="text-lg font-semibold">{modeLabels[rating.game_mode]}</h3>
                     <p className="text-3xl font-bold tabular-nums text-emerald-300">{rating.rating}</p>
                   </div>
-                  <p className="mt-3 text-sm text-slate-400">{rating.rated_games < 5 ? `Vorläufig · noch ${5 - rating.rated_games} Partien bis zur stabileren Wertung` : "Einstufungsphase abgeschlossen"}</p>
+                  <p className="mt-3 text-sm text-slate-400">{rating.rated_games < 5 ? "Vorläufig · noch " + (5 - rating.rated_games) + " Partien bis zur stabileren Wertung" : "Einstufungsphase abgeschlossen"}</p>
                   <p className="mt-1 text-sm text-slate-400">{rating.wins} Siege · {rating.draws} Remis · {rating.losses} Niederlagen</p>
                 </article>
               ))}
