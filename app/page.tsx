@@ -1,97 +1,10 @@
 "use client";
-
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect,useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-
-const activities = [
-  { title: "Online spielen", detail: "Finde einen Gegner", href: "/online", tag: "LIVE", mark: "↗" },
-  { title: "Gegen den Bot", detail: "Spiele in deinem Tempo", href: "/bot", tag: "SOLO", mark: "♟" },
-  { title: "Freie Partie", detail: "Stelle deine Partie ein", href: "/play", tag: "LOKAL", mark: "＋" },
-];
-
-export default function Home() {
-  const [username, setUsername] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function loadProfile() {
-      try {
-        const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-        const { data } = await supabase.from("profiles").select("username").eq("id", user.id).single();
-        if (data) setUsername(data.username);
-      } catch (error) {
-        console.error("Profil konnte nicht geladen werden:", error);
-      } finally {
-        setLoading(false);
-      }
-    }
-    void loadProfile();
-  }, []);
-
-  async function handleLogout() {
-    const supabase = createClient();
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error("Abmelden fehlgeschlagen:", error);
-      return;
-    }
-    window.location.assign("/login");
-  }
-
-  return (
-    <main className="min-h-screen bg-slate-950 text-slate-100">
-      <div className="mx-auto max-w-6xl px-5 pb-16 pt-8 sm:px-8 sm:pt-12">
-        <header className="mb-10 flex flex-wrap items-center justify-between gap-5 border-b border-slate-800 pb-7">
-          <div>
-            <p className="text-sm font-medium text-emerald-400">SCHACHPLATTFORM</p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
-              {loading ? "Schach, ganz in Ruhe." : username ? "Willkommen, " + username + "." : "Zeit für eine Partie."}
-            </h1>
-            <p className="mt-2 text-sm text-slate-400 sm:text-base">Wähle, wie du heute spielen möchtest.</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <Link href="/installieren" className="rounded-lg border border-slate-700 px-4 py-2.5 text-sm font-medium text-slate-300 transition hover:border-slate-500 hover:text-white">App installieren</Link>
-            {username && <button type="button" onClick={() => void handleLogout()} className="rounded-lg px-3 py-2.5 text-sm text-slate-400 transition hover:bg-slate-900 hover:text-white">Abmelden</button>}
-            {!loading && !username && <Link href="/login" className="rounded-lg bg-emerald-400 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300">Anmelden</Link>}
-          </div>
-        </header>
-
-        <section aria-labelledby="spielen-heading">
-          <div className="mb-4 flex items-end justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Dein nächster Zug</p>
-              <h2 id="spielen-heading" className="mt-1 text-xl font-semibold text-white">Spielen</h2>
-            </div>
-            <Link href="/partien" className="text-sm text-slate-400 transition hover:text-emerald-300">Partieverlauf <span aria-hidden="true">→</span></Link>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {activities.map((activity, index) => (
-              <Link key={activity.href} href={activity.href} className="group flex min-h-36 flex-col justify-between rounded-xl border border-slate-800 bg-slate-900/70 p-5 transition hover:border-emerald-500/50 hover:bg-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400">
-                <div className="flex items-start justify-between">
-                  <span className={index === 0 ? "flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-400/10 text-lg text-emerald-300" : "flex h-9 w-9 items-center justify-center rounded-lg bg-slate-800 text-lg text-slate-300"} aria-hidden="true">{activity.mark}</span>
-                  <span className="rounded-md border border-slate-700/80 px-2 py-1 text-[10px] font-semibold tracking-wider text-slate-500">{activity.tag}</span>
-                </div>
-                <div className="mt-5 flex items-end justify-between gap-2">
-                  <div><h3 className="font-semibold text-slate-100">{activity.title}</h3><p className="mt-1 text-sm text-slate-400">{activity.detail}</p></div>
-                  <span aria-hidden="true" className="text-xl text-slate-500 transition group-hover:translate-x-1 group-hover:text-emerald-300">→</span>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
-
-        <section className="mt-10 grid gap-3 sm:grid-cols-2">
-          <Link href="/analyse" className="flex items-center justify-between rounded-xl border border-slate-800 px-5 py-4 transition hover:border-slate-600 hover:bg-slate-900/60">
-            <div><h2 className="font-medium text-slate-200">Partie analysieren</h2><p className="mt-1 text-sm text-slate-500">Stellungen untersuchen und Züge nachspielen.</p></div><span aria-hidden="true" className="ml-4 text-slate-500">→</span>
-          </Link>
-          <Link href="/profile" className="flex items-center justify-between rounded-xl border border-slate-800 px-5 py-4 transition hover:border-slate-600 hover:bg-slate-900/60">
-            <div><h2 className="font-medium text-slate-200">Dein Profil</h2><p className="mt-1 text-sm text-slate-500">Spielername, Wertungen und Schachreise.</p></div><span aria-hidden="true" className="ml-4 text-slate-500">→</span>
-          </Link>
-        </section>
-      </div>
-    </main>
-  );
-}
+import { MiniChessboard } from "@/components/mini-chessboard";
+import { tacticsPreviewFen } from "@/lib/tactics";
+const activities=[{title:"Online spielen",detail:"Finde einen Gegner",href:"/online",tag:"LIVE",mark:"↗"},{title:"Gegen den Bot",detail:"Spiele in deinem Tempo",href:"/bot",tag:"SOLO",mark:"♟"},{title:"Freie Partie",detail:"Stelle deine Partie ein",href:"/play",tag:"LOKAL",mark:"＋"}];
+export default function Home(){const[username,setUsername]=useState<string|null>(null);const[loading,setLoading]=useState(true);useEffect(()=>{async function loadProfile(){try{const supabase=createClient();const{data:{user}}=await supabase.auth.getUser();if(!user)return;const{data}=await supabase.from("profiles").select("username").eq("id",user.id).single();if(data)setUsername(data.username);}catch(error){console.error("Profil konnte nicht geladen werden:",error);}finally{setLoading(false);}}void loadProfile();},[]);return <main className="min-h-screen bg-slate-950 text-slate-100"><div className="mx-auto max-w-6xl px-5 pb-16 pt-8 sm:px-8 sm:pt-12"><header className="mb-10 flex flex-wrap items-center justify-between gap-5 border-b border-slate-800 pb-7"><div className="flex min-w-0 items-center gap-4 sm:gap-6"><Link href="/taktik" aria-label="Taktikaufgabe starten" className="w-32 shrink-0 transition hover:scale-[1.02] sm:w-44"><MiniChessboard fen={tacticsPreviewFen} label="Vorschau einer Taktikaufgabe"/></Link><div><p className="text-xs font-medium uppercase tracking-[0.16em] text-emerald-400">Taktiktraining</p><h1 className="mt-2 text-xl font-semibold tracking-tight text-white sm:text-3xl">Der nächste Zug liegt bei dir.</h1><p className="mt-2 text-sm text-slate-400">Löse eine Aufgabe in deiner Spielstärke.</p><Link href="/taktik" className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-emerald-300 hover:text-emerald-200">Aufgabe starten <span aria-hidden="true">→</span></Link></div></div><div className="flex items-center gap-3">{username&&<Link href="/einstellungen" className="rounded-lg px-3 py-2.5 text-sm text-slate-400 transition hover:bg-slate-900 hover:text-white">Einstellungen</Link>}{!loading&&!username&&<Link href="/login" className="rounded-lg bg-emerald-400 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300">Anmelden</Link>}</div></header>
+<section aria-labelledby="spielen-heading"><div className="mb-4 flex items-end justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Dein nächster Zug</p><h2 id="spielen-heading" className="mt-1 text-xl font-semibold text-white">Spielen</h2></div><Link href="/partien" className="text-sm text-slate-400 transition hover:text-emerald-300">Partieverlauf <span aria-hidden="true">→</span></Link></div><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{activities.map((activity,index)=><Link key={activity.href} href={activity.href} className="group flex min-h-36 flex-col justify-between rounded-xl border border-slate-800 bg-slate-900/70 p-5 transition hover:border-emerald-500/50 hover:bg-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"><div className="flex items-start justify-between"><span className={index===0?"flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-400/10 text-lg text-emerald-300":"flex h-9 w-9 items-center justify-center rounded-lg bg-slate-800 text-lg text-slate-300"} aria-hidden="true">{activity.mark}</span><span className="rounded-md border border-slate-700/80 px-2 py-1 text-[10px] font-semibold tracking-wider text-slate-500">{activity.tag}</span></div><div className="mt-5 flex items-end justify-between gap-2"><div><h3 className="font-semibold text-slate-100">{activity.title}</h3><p className="mt-1 text-sm text-slate-400">{activity.detail}</p></div><span aria-hidden="true" className="text-xl text-slate-500 transition group-hover:translate-x-1 group-hover:text-emerald-300">→</span></div></Link>)}</div></section>
+<section className="mt-10 grid gap-3 sm:grid-cols-2"><Link href="/analyse" className="flex items-center justify-between rounded-xl border border-slate-800 px-5 py-4 transition hover:border-slate-600 hover:bg-slate-900/60"><div><h2 className="font-medium text-slate-200">Partie analysieren</h2><p className="mt-1 text-sm text-slate-500">Stellungen untersuchen und Züge nachspielen.</p></div><span aria-hidden="true" className="ml-4 text-slate-500">→</span></Link><Link href="/profile" className="flex items-center justify-between rounded-xl border border-slate-800 px-5 py-4 transition hover:border-slate-600 hover:bg-slate-900/60"><div><h2 className="font-medium text-slate-200">Dein Profil</h2><p className="mt-1 text-sm text-slate-500">Spielername, Wertungen und Schachreise.</p></div><span aria-hidden="true" className="ml-4 text-slate-500">→</span></Link></section></div></main>;}
