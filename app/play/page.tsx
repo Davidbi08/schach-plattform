@@ -263,13 +263,13 @@ export default function Home() {
           <div className={'text-2xl font-bold tabular-nums ' + (materialScore > 0 ? 'text-emerald-300' : materialScore < 0 ? 'text-rose-300' : 'text-slate-200')}>{materialScore > 0 ? '+' : materialScore < 0 ? '−' : ''}{Math.abs(materialScore)}</div>
         </div>
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-          <div className="overflow-hidden rounded-xl border-4 border-slate-700 shadow-2xl">
+          <div className="chessboard-frame overflow-hidden shadow-2xl">
             <div className="relative grid grid-cols-8">
               {board.map((row, rowIndex) => row.map((piece, colIndex) => {
                 const square = isFlipped
                   ? String.fromCharCode(104 - colIndex) + (rowIndex + 1)
                   : String.fromCharCode(97 + colIndex) + (8 - rowIndex);
-                const isLight = (rowIndex + colIndex) % 2 === 0;
+                const isLight = (rowIndex + colIndex) % 2 === 1;
                 const fileDelta = animatedMove ? animatedMove.to.charCodeAt(0) - animatedMove.from.charCodeAt(0) : 0;
                 const rankDelta = animatedMove ? Number(animatedMove.to[1]) - Number(animatedMove.from[1]) : 0;
                 const moveFromX = (isFlipped ? fileDelta : -fileDelta) * 100;
@@ -279,8 +279,8 @@ export default function Home() {
                   <button key={square} type="button" aria-label={square + (piece ? ', ' + (piece.color === 'w' ? 'weiße' : 'schwarze') + ' Figur' : '')}
                     disabled={botThinking || (botElo !== null && game.turn() === botColor)}
                     onClick={() => handleSquareClick(square)}
-                    className={'relative flex aspect-square w-11 items-center justify-center text-3xl disabled:cursor-wait sm:w-16 sm:text-5xl md:w-20 md:text-6xl ' + (isLight ? 'bg-amber-100' : 'bg-amber-700') + (selectedSquare === square ? ' ring-4 ring-blue-500 ring-inset' : '')}>
-                    {piece && <span style={isAnimatedMove ? ({ '--move-from-x': moveFromX + '%', '--move-from-y': moveFromY + '%' } as import('react').CSSProperties) : undefined} className={'absolute inset-0 flex items-center justify-center' + (isAnimatedMove ? ' animate-chess-piece-move' : '')}><ChessPieceIcon color={piece.color} type={piece.type} /></span>}{colIndex === 0 && <span aria-hidden="true" className={'pointer-events-none absolute left-1 top-0.5 z-10 text-[9px] font-bold sm:text-xs ' + (isLight ? 'text-amber-800' : 'text-amber-100')}>{square[1]}</span>}{rowIndex === 7 && <span aria-hidden="true" className={'pointer-events-none absolute bottom-0 right-1 z-10 text-[9px] font-bold sm:text-xs ' + (isLight ? 'text-amber-800' : 'text-amber-100')}>{square[0].toUpperCase()}</span>}{possibleMoves.includes(square) && <span className="absolute h-3 w-3 rounded-full bg-slate-800/60" />}
+                    className={'relative flex aspect-square w-11 items-center justify-center text-3xl disabled:cursor-wait sm:w-16 sm:text-5xl md:w-20 md:text-6xl ' + (isLight ? 'chessboard-light' : 'chessboard-dark') + (selectedSquare === square ? ' ring-4 ring-blue-500 ring-inset' : '')}>
+                    {piece && <span style={isAnimatedMove ? ({ '--move-from-x': moveFromX + '%', '--move-from-y': moveFromY + '%' } as import('react').CSSProperties) : undefined} className={'absolute inset-0 flex items-center justify-center' + (isAnimatedMove ? ' animate-chess-piece-move' : '')}><ChessPieceIcon color={piece.color} type={piece.type} /></span>}{colIndex === 0 && <span aria-hidden="true" className={'pointer-events-none absolute left-1 top-0.5 z-10 text-[9px] font-bold sm:text-xs ' + (isLight ? 'text-[#537765]' : 'text-[#dbe5dc]')}>{square[1]}</span>}{rowIndex === 7 && <span aria-hidden="true" className={'pointer-events-none absolute bottom-0 right-1 z-10 text-[9px] font-bold sm:text-xs ' + (isLight ? 'text-[#537765]' : 'text-[#dbe5dc]')}>{square[0].toUpperCase()}</span>}{possibleMoves.includes(square) && <span className="absolute h-3 w-3 rounded-full bg-slate-800/60" />}
                   </button>
                 );
               }))}
