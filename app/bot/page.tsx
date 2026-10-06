@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { ChessPieceIcon } from '@/components/chess-piece-icon';
+import { ChessPieceIcon } from '@/components/chess-piece';
 
 
 const clockOptions = [
