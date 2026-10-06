@@ -1,6 +1,8 @@
 'use client';
 
 import Link from 'next/link';
+import { useState } from 'react';
+import { ChessPieceIcon } from '@/components/chess-piece-icon';
 
 
 const clockOptions = [
