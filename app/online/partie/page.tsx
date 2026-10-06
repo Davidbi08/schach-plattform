@@ -7,8 +7,8 @@ import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { ChessPieceIcon } from "@/components/chess-piece";
 import { describeMaterialAdvantage, getMaterialAdvantage } from "@/lib/chess/material";
-import { formatClock } from "../protocol";
-import { saveOnlineGame, type SavedMove } from "../history-store";type MatchConfig = { room: string; player: string; opponent: string; white: boolean; initialSeconds: number; incrementSeconds: number; whiteName: string; blackName: string };
+import { formatClock, getOnlineRatingMode, getOnlineRatingModeLabel, type OnlineRatingMode } from "../protocol";
+type MatchConfig = { room: string; player: string; opponent: string; white: boolean; initialSeconds: number; incrementSeconds: number; ratingMode: OnlineRatingMode; whiteName: string; blackName: string };
 type ClockState = { whiteMs: number; blackMs: number; lastTick: number };
 type MovePayload = { from: string; to: string; promotion?: string; by: string; whiteMs: number; blackMs: number };
 type MatchEnd = { result: "1-0" | "0-1" | "1/2-1/2"; reason: string };
@@ -43,6 +43,7 @@ export default function OnlineGamePage() {
   const [clocks, setClocks] = useState({ whiteMs: 0, blackMs: 0 });
   const clocksRef = useRef<ClockState>({ whiteMs: 0, blackMs: 0, lastTick: 0 });
   const [finished, setFinished] = useState<MatchEnd | null>(null);
+    const [ratingMessage, setRatingMessage] = useState("");
   const finishedRef = useRef<MatchEnd | null>(null);
   const finishGameRef = useRef<(end: MatchEnd, broadcast?: boolean) => void>(() => undefined);
   const channelRef = useRef<RealtimeChannel | null>(null);
@@ -71,7 +72,8 @@ export default function OnlineGamePage() {
       return;
     }
 
-    const matchConfig = { room, player, opponent, white, initialSeconds, incrementSeconds, whiteName, blackName };
+    const ratingMode = getOnlineRatingMode(initialSeconds, incrementSeconds);
+    const matchConfig = { room, player, opponent, white, initialSeconds, incrementSeconds, ratingMode, whiteName, blackName };
     setConfig(matchConfig);
     gameRef.current = new Chess();
     setGame(gameRef.current);
@@ -103,7 +105,34 @@ export default function OnlineGamePage() {
     });
   }
 
-  function finishGame(end: MatchEnd, broadcast = false) {
+  async function saveOnlineRating(end: MatchEnd, match: MatchConfig) {
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setRatingMessage("Melde dich an, damit deine Online-Elo gespeichert wird.");
+        return;
+      }
+      const result = end.result === "1-0" ? "white" : end.result === "0-1" ? "black" : "draw";
+      const { data, error } = await supabase.rpc("record_online_chess_result", {
+        p_game_id: match.room,
+        p_game_mode: match.ratingMode,
+        p_white_username: match.whiteName,
+        p_black_username: match.blackName,
+        p_result: result,
+      });
+      const rating = data as { rating?: number; delta?: number } | null;
+      if (error || typeof rating?.delta !== "number") {
+        setRatingMessage("Die Elo-Wertung konnte nicht gespeichert werden.");
+        return;
+      }
+      setRatingMessage("Elo " + getOnlineRatingModeLabel(match.ratingMode) + ": " + (rating.delta > 0 ? "+" : "") + rating.delta + " · neu " + rating.rating);
+    } catch {
+      setRatingMessage("Die Elo-Wertung konnte nicht gespeichert werden.");
+    }
+  }
+
+function finishGame(end: MatchEnd, broadcast = false) {
     if (!config || finishedRef.current) return;
     finishedRef.current = end;
     setFinished(end);
@@ -113,6 +142,8 @@ export default function OnlineGamePage() {
     setSelectedSquare(null);
     setPossibleMoves([]);
     saveEnd(end, config);
+    setRatingMessage("");
+    void saveOnlineRating(end, config);
     if (broadcast && channelRef.current) {
       void channelRef.current.send({ type: "broadcast", event: "game-end", payload: { by: config.player, ...end } });
     }
@@ -434,7 +465,7 @@ export default function OnlineGamePage() {
                 <button type="button" onClick={resign} disabled={!started} className="w-full rounded-xl border border-rose-950 px-4 py-3 text-sm font-semibold text-rose-300 hover:bg-rose-950/40 disabled:cursor-not-allowed disabled:opacity-50">Aufgeben</button>
               </section>
             ) : (
-              <div className="rounded-2xl border border-emerald-900 bg-emerald-950/30 p-4"><p className="font-bold text-emerald-200">Partie beendet</p><p className="mt-1 text-sm text-slate-300">Das Ergebnis wurde im Partieverlauf auf diesem Gerät gespeichert.</p><Link href="/partien" className="mt-4 inline-flex font-semibold text-emerald-300 underline underline-offset-4">Zum Partieverlauf</Link></div>
+              <div className="rounded-2xl border border-emerald-900 bg-emerald-950/30 p-4"><p className="font-bold text-emerald-200">Partie beendet</p>{ratingMessage && <p className="mt-1 text-sm text-emerald-200">{ratingMessage}</p>}<p className="mt-1 text-sm text-slate-300">Das Ergebnis wurde im Partieverlauf auf diesem Gerät gespeichert.</p><Link href="/partien" className="mt-4 inline-flex font-semibold text-emerald-300 underline underline-offset-4">Zum Partieverlauf</Link></div>
             )}
           </aside>
         </div>

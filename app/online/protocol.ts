@@ -6,6 +6,20 @@ export type TimeControl = {
   group: string;
 };
 
+export type OnlineRatingMode = "bullet" | "blitz" | "rapid" | "classical";
+
+export function getOnlineRatingMode(initialSeconds: number, incrementSeconds: number): OnlineRatingMode {
+  const control = ONLINE_TIME_CONTROLS.find((option) => option.initialSeconds === initialSeconds && option.incrementSeconds === incrementSeconds);
+  if (control?.group === "Bullet") return "bullet";
+  if (control?.group === "Blitz") return "blitz";
+  if (control?.group === "Klassisch") return "classical";
+  return "rapid";
+}
+
+export function getOnlineRatingModeLabel(mode: OnlineRatingMode) {
+  return mode === "classical" ? "Klassisch" : mode === "bullet" ? "Bullet" : mode === "blitz" ? "Blitz" : "Rapid";
+}
+
 export const ONLINE_TIME_CONTROLS: TimeControl[] = [
   { id: "1+0", initialSeconds: 60, incrementSeconds: 0, label: "1 + 0", group: "Bullet" },
   { id: "2+1", initialSeconds: 120, incrementSeconds: 1, label: "2 + 1", group: "Bullet" },
