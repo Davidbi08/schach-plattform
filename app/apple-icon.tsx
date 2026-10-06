@@ -6,15 +6,15 @@ export const contentType = "image/png";
 export default function AppleIcon() {
   return new ImageResponse(
     (
-      <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#020617" }}>
-        <div style={{ width: "90%", height: "90%", position: "relative", display: "flex", overflow: "hidden", borderRadius: "22%", backgroundColor: "#0f172a" }}>
+      <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#050505" }}>
+        <div style={{ width: "90%", height: "90%", position: "relative", display: "flex", overflow: "hidden", borderRadius: "22%", backgroundColor: "#050505" }}>
           <svg width="100%" height="100%" viewBox="0 0 512 512" style={{ position: "absolute", inset: 0 }}>
-            <circle cx="377" cy="373" r="126" fill="#e2e8f0" />
-            <circle cx="190" cy="88" r="29" fill="#f8fafc" />
-            <path d="M165 121c-9 8-15 18-19 31l-15 48c-4 14-15 24-31 34l12 26c13 10 28 16 45 18l-23 33-14 34h140l-14-34-23-33c17-2 32-8 45-18l12-26c-16-10-27-20-31-34l-15-48c-4-13-10-23-19-31z" fill="#f8fafc" />
-            <path d="M176 75l28 28" fill="none" stroke="#0f172a" strokeWidth="8" strokeLinecap="round" />
-            <path d="M278 434l29-55-33-39c-14-17-15-38-3-55l17-24 38-27 31 1 22 23 17-20 18 43 31 17 18 29-30 10-30-15-24 10-3 25 36 20 13 39 31 36 2 22H278z" fill="#1e3a8a" />
-            <circle cx="407" cy="313" r="6" fill="#f8fafc" />
+            <circle cx="150" cy="115" r="16" fill="#fff" />
+            <path d="M150 135c-24 20-42 45-42 72 0 22 10 38 24 51h-12c-10 0-16 7-16 15s6 15 16 15h60c10 0 16-7 16-15s-6-15-16-15h-12c14-13 24-29 24-51 0-27-18-52-42-72z" fill="#fff" />
+            <path d="M102 295h96l10 18H92zM86 322h128l10 22H76z" fill="#fff" />
+            <path d="M316 372c-6-38-2-72 17-102 13-20 29-34 48-47 15-10 23-23 23-39 0-9-3-18-8-27 23 7 42 21 53 41 10 18 13 38 11 57-2 17-8 32-19 45 21 11 37 27 47 47 8 16 11 33 10 50 0 11-8 19-20 19H316z" fill="#fff" />
+            <path d="M307 390h134l13 24H294zM292 428h168l13 25H279z" fill="#fff" />
+            <path d="M304 72 196 250h63l-82 190 181-224h-66z" fill="#d4af37" />
           </svg>
         </div>
       </div>
