@@ -1,4 +1,5 @@
 "use client";
+
 import { useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -14,7 +15,7 @@ export default function ForgotPasswordPage() {
     setMessage("");
     try {
       const { error } = await createClient().auth.resetPasswordForEmail(email, {
-                redirectTo: window.location.origin + "/auth/callback",
+        redirectTo: window.location.origin + "/auth/callback",
       });
       if (error) throw error;
       setMessage("Wenn ein Konto mit dieser E-Mail existiert, erhältst du in Kürze eine E-Mail mit dem Link zum Zurücksetzen.");
@@ -27,19 +28,22 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white">
-      <div className="mx-auto max-w-md px-6 py-16">
-        <h1 className="text-3xl font-bold">Passwort zurücksetzen</h1>
-        <p className="mt-2 text-slate-400">Gib die E-Mail-Adresse deines Accounts ein. Wenn sie registriert ist, schicken wir dir einen Link.</p>
-        <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-          <div>
-            <label htmlFor="email" className="mb-2 block text-sm font-medium">E-Mail</label>
-            <input id="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} required autoComplete="email" className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 outline-none focus:border-slate-400" placeholder="deine@email.de" />
-          </div>
-          <button type="submit" disabled={loading} className="w-full rounded-xl bg-white px-4 py-3 font-semibold text-slate-950 disabled:opacity-50">{loading ? "Sende Link..." : "Link per E-Mail senden"}</button>
-        </form>
-        {message && <p role="status" className="mt-6 rounded-xl border border-slate-700 bg-slate-900 p-4 text-sm text-slate-300">{message}</p>}
-        <p className="mt-6 text-sm text-slate-400"><Link className="underline hover:text-white" href="/login">Zurück zum Einloggen</Link></p>
+    <main className="flex min-h-screen items-center bg-slate-950 px-5 py-12 text-white">
+      <div className="mx-auto w-full max-w-md">
+        <Link href="/" className="mb-7 inline-flex items-center gap-2 text-sm font-medium text-slate-400 transition hover:text-white"><span className="text-emerald-400" aria-hidden="true">♟</span> Zur Schachplattform</Link>
+        <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 sm:p-8">
+          <h1 className="text-3xl font-semibold tracking-tight">Passwort zurücksetzen</h1>
+          <p className="mt-2 text-slate-400">Gib die E-Mail-Adresse deines Accounts ein. Wenn sie registriert ist, schicken wir dir einen Link.</p>
+          <form onSubmit={handleSubmit} className="mt-7 space-y-5">
+            <div>
+              <label htmlFor="email" className="mb-2 block text-sm font-medium text-slate-200">E-Mail</label>
+              <input id="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} required autoComplete="email" className="w-full rounded-lg border border-slate-700 bg-slate-950 px-4 py-3 outline-none transition focus:border-emerald-400" placeholder="deine@email.de" />
+            </div>
+            <button type="submit" disabled={loading} className="w-full rounded-lg bg-emerald-400 px-4 py-3 font-semibold text-slate-950 transition hover:bg-emerald-300 disabled:opacity-50">{loading ? "Sende Link..." : "Link per E-Mail senden"}</button>
+          </form>
+          {message && <p role="status" className="mt-6 rounded-xl border border-slate-700 bg-slate-900 p-4 text-sm text-slate-300">{message}</p>}
+          <p className="mt-6 text-sm text-slate-400"><Link className="underline hover:text-white" href="/login">Zurück zum Einloggen</Link></p>
+        </section>
       </div>
     </main>
   );
