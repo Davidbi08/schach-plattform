@@ -249,7 +249,7 @@ export default function AnalysePage() {
               }))}
             </div>
             <div aria-hidden="true" />
-            <div className="grid grid-cols-8 text-center text-xs text-slate-400">{Array.from({ length: 8 }, (_, index) => <span key={index}>{String.fromCharCode(97 + index)}</span>)}</div>
+            <div className="grid grid-cols-8 text-center text-xs text-slate-400">{Array.from({ length: 8 }, (_, index) => <span key={index}>{String.fromCharCode(65 + index)}</span>)}</div>
           </div>
           <div className="mx-auto mt-4 flex max-w-[620px] items-center justify-between gap-2">
             <button type="button" onClick={() => { setMoveIndex(Math.max(0, moveIndex - 1)); setSelectedSquare(null); }} disabled={moveIndex === 0} className="rounded-lg border border-slate-700 px-4 py-2 disabled:opacity-40">← Zurück</button>
