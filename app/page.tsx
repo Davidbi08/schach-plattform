@@ -1,10 +1,19 @@
 "use client";
+
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+
+const activities = [
+  { title: "Online spielen", detail: "Finde einen Gegner", href: "/online", tag: "LIVE", mark: "↗" },
+  { title: "Gegen den Bot", detail: "Spiele in deinem Tempo", href: "/bot", tag: "SOLO", mark: "♟" },
+  { title: "Freie Partie", detail: "Stelle deine Partie ein", href: "/play", tag: "LOKAL", mark: "＋" },
+];
+
 export default function Home() {
   const [username, setUsername] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
   useEffect(() => {
     async function loadProfile() {
       try {
@@ -13,22 +22,76 @@ export default function Home() {
         if (!user) return;
         const { data } = await supabase.from("profiles").select("username").eq("id", user.id).single();
         if (data) setUsername(data.username);
-      } catch (error) { console.error("Profil konnte nicht geladen werden:", error); }
-      finally { setLoading(false); }
+      } catch (error) {
+        console.error("Profil konnte nicht geladen werden:", error);
+      } finally {
+        setLoading(false);
+      }
     }
     void loadProfile();
   }, []);
+
   async function handleLogout() {
     const supabase = createClient();
     const { error } = await supabase.auth.signOut();
-    if (error) { console.error("Abmelden fehlgeschlagen:", error); return; }
+    if (error) {
+      console.error("Abmelden fehlgeschlagen:", error);
+      return;
+    }
     window.location.assign("/login");
   }
-  return <main className="min-h-screen bg-slate-950 text-white"><div className="mx-auto max-w-6xl px-6 py-12">
-    <header className="mb-16"><div className="mb-5 text-5xl" aria-hidden="true">♟</div>
-      {loading ? <p className="text-lg text-slate-400">Lade Profil …</p> : username ? <><h1 className="text-4xl font-bold sm:text-5xl">Hallo, {username}!</h1><p className="mt-4 max-w-2xl text-lg text-slate-300">Willkommen zurück. Schön, dass du wieder da bist.</p><button type="button" onClick={() => void handleLogout()} className="mt-6 rounded-xl border border-slate-700 px-5 py-3 font-semibold text-slate-100 transition hover:bg-slate-800">Ausloggen</button></> : <><h1 className="text-4xl font-bold sm:text-5xl">Deine Schachplattform</h1><p className="mt-4 max-w-2xl text-lg text-slate-300">Schach. Community. Creator. Deine persönliche Schachreise.</p><div className="mt-6 flex flex-wrap gap-3"><Link href="/login" className="rounded-xl bg-white px-5 py-3 font-semibold text-slate-950">Einloggen</Link><Link href="/auth/register" className="rounded-xl border border-slate-700 px-5 py-3 font-semibold">Account erstellen</Link></div></>}
-      <Link href="/installieren" className="mt-6 flex w-fit rounded-xl border border-slate-700 px-5 py-3 font-semibold text-slate-100 transition hover:bg-slate-800">App installieren</Link>
-    </header>
-    <section className="max-w-3xl rounded-2xl border border-slate-800 bg-slate-900/70 p-7 sm:p-10"><p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-300">Spielen · Lernen · Gemeinsam wachsen</p><h2 className="mt-4 text-2xl font-bold sm:text-3xl">Wähle deinen nächsten Schachmoment.</h2><p className="mt-4 leading-7 text-slate-300">Alle Bereiche findest du übersichtlich im Menü. Unter „Spielen“ kannst du eine Partie starten oder gegen einen Bot antreten. In der Analyse kannst du deine Partien nachspielen und untersuchen.</p><p className="mt-6 text-sm text-slate-500">Die Plattform wächst Schritt für Schritt mit deiner Schachreise.</p></section>
-  </div></main>;
+
+  return (
+    <main className="min-h-screen bg-slate-950 text-slate-100">
+      <div className="mx-auto max-w-6xl px-5 pb-16 pt-8 sm:px-8 sm:pt-12">
+        <header className="mb-10 flex flex-wrap items-center justify-between gap-5 border-b border-slate-800 pb-7">
+          <div>
+            <p className="text-sm font-medium text-emerald-400">SCHACHPLATTFORM</p>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
+              {loading ? "Schach, ganz in Ruhe." : username ? "Willkommen, " + username + "." : "Zeit für eine Partie."}
+            </h1>
+            <p className="mt-2 text-sm text-slate-400 sm:text-base">Wähle, wie du heute spielen möchtest.</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Link href="/installieren" className="rounded-lg border border-slate-700 px-4 py-2.5 text-sm font-medium text-slate-300 transition hover:border-slate-500 hover:text-white">App installieren</Link>
+            {username && <button type="button" onClick={() => void handleLogout()} className="rounded-lg px-3 py-2.5 text-sm text-slate-400 transition hover:bg-slate-900 hover:text-white">Abmelden</button>}
+            {!loading && !username && <Link href="/login" className="rounded-lg bg-emerald-400 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300">Anmelden</Link>}
+          </div>
+        </header>
+
+        <section aria-labelledby="spielen-heading">
+          <div className="mb-4 flex items-end justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Dein nächster Zug</p>
+              <h2 id="spielen-heading" className="mt-1 text-xl font-semibold text-white">Spielen</h2>
+            </div>
+            <Link href="/partien" className="text-sm text-slate-400 transition hover:text-emerald-300">Partieverlauf <span aria-hidden="true">→</span></Link>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {activities.map((activity, index) => (
+              <Link key={activity.href} href={activity.href} className="group flex min-h-36 flex-col justify-between rounded-xl border border-slate-800 bg-slate-900/70 p-5 transition hover:border-emerald-500/50 hover:bg-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400">
+                <div className="flex items-start justify-between">
+                  <span className={index === 0 ? "flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-400/10 text-lg text-emerald-300" : "flex h-9 w-9 items-center justify-center rounded-lg bg-slate-800 text-lg text-slate-300"} aria-hidden="true">{activity.mark}</span>
+                  <span className="rounded-md border border-slate-700/80 px-2 py-1 text-[10px] font-semibold tracking-wider text-slate-500">{activity.tag}</span>
+                </div>
+                <div className="mt-5 flex items-end justify-between gap-2">
+                  <div><h3 className="font-semibold text-slate-100">{activity.title}</h3><p className="mt-1 text-sm text-slate-400">{activity.detail}</p></div>
+                  <span aria-hidden="true" className="text-xl text-slate-500 transition group-hover:translate-x-1 group-hover:text-emerald-300">→</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <section className="mt-10 grid gap-3 sm:grid-cols-2">
+          <Link href="/analyse" className="flex items-center justify-between rounded-xl border border-slate-800 px-5 py-4 transition hover:border-slate-600 hover:bg-slate-900/60">
+            <div><h2 className="font-medium text-slate-200">Partie analysieren</h2><p className="mt-1 text-sm text-slate-500">Stellungen untersuchen und Züge nachspielen.</p></div><span aria-hidden="true" className="ml-4 text-slate-500">→</span>
+          </Link>
+          <Link href="/profile" className="flex items-center justify-between rounded-xl border border-slate-800 px-5 py-4 transition hover:border-slate-600 hover:bg-slate-900/60">
+            <div><h2 className="font-medium text-slate-200">Dein Profil</h2><p className="mt-1 text-sm text-slate-500">Spielername, Wertungen und Schachreise.</p></div><span aria-hidden="true" className="ml-4 text-slate-500">→</span>
+          </Link>
+        </section>
+      </div>
+    </main>
+  );
 }
