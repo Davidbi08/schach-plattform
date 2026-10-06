@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { ChessPieceIcon } from "@/components/chess-piece";
 import { describeMaterialAdvantage, getMaterialAdvantage } from "@/lib/chess/material";
 import { formatClock, getOnlineRatingMode, getOnlineRatingModeLabel, type OnlineRatingMode } from "../protocol";
+import { saveOnlineGame, type SavedMove } from "../history-store";
 type MatchConfig = { room: string; player: string; opponent: string; white: boolean; initialSeconds: number; incrementSeconds: number; ratingMode: OnlineRatingMode; whiteName: string; blackName: string };
 type ClockState = { whiteMs: number; blackMs: number; lastTick: number };
 type MovePayload = { from: string; to: string; promotion?: string; by: string; whiteMs: number; blackMs: number };
