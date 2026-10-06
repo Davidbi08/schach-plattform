@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+
 
 const clockOptions = [
   { id: 'free', minutes: 0, increment: 0, label: 'Ohne Zeit', category: 'frei' },
@@ -14,9 +14,9 @@ const clockOptions = [
 ];
 
 const colorOptions = [
-  { id: 'white', label: 'Weiß', icon: '♔', description: 'Du spielst mit den weißen Figuren.' },
-  { id: 'black', label: 'Schwarz', icon: '♚', description: 'Du spielst mit den schwarzen Figuren.' },
-  { id: 'random', label: 'Zufall', icon: '🎲', description: 'Die Farbe wird für dich ausgelost.' },
+  { id: 'white', label: 'Weiß', color: 'w' as const, description: 'Du spielst mit den weißen Figuren.' },
+  { id: 'black', label: 'Schwarz', color: 'b' as const, description: 'Du spielst mit den schwarzen Figuren.' },
+  { id: 'random', label: 'Zufall', color: null, description: 'Die Farbe wird für dich ausgelost.' },
 ];
 
 const bots = [
@@ -73,7 +73,7 @@ export default function BotPage() {
                 className={selectedColor === option.id
                   ? 'rounded-xl border border-emerald-400 bg-emerald-950/60 px-4 py-3 text-left ring-2 ring-emerald-400/40'
                   : 'rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-left hover:border-slate-500'}>
-                <span className="mr-2 text-xl" aria-hidden="true">{option.icon}</span>
+                <span className="mr-2 inline-flex h-8 w-8 items-center justify-center align-middle" aria-hidden="true">{option.color ? <ChessPieceIcon color={option.color} type="k" /> : <span className="text-xl">🎲</span>}</span>
                 <span className="font-bold">{option.label}</span>
                 <span className="mt-1 block text-sm text-slate-400">{option.description}</span>
               </button>
