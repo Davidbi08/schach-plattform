@@ -157,6 +157,14 @@ export function PlayerProfileView({ requestedUsername }: { requestedUsername?: s
     }
   }
 
+  const profileTotals = ratings.reduce((totals, rating) => ({
+    games: totals.games + rating.rated_games,
+    wins: totals.wins + rating.wins,
+    draws: totals.draws + rating.draws,
+    losses: totals.losses + rating.losses,
+  }), { games: 0, wins: 0, draws: 0, losses: 0 });
+  const winRate = profileTotals.games > 0 ? Math.round(profileTotals.wins / profileTotals.games * 100) : 0;
+
   return (
     <main className="min-h-screen bg-slate-950 px-4 py-8 text-white sm:px-8 sm:py-12">
       <div className="mx-auto max-w-4xl">
@@ -192,6 +200,23 @@ export function PlayerProfileView({ requestedUsername }: { requestedUsername?: s
             <h2 id="profile-settings-heading" className="text-2xl font-bold">Profileinstellungen</h2>
             <p className="mb-5 mt-1 text-sm text-slate-400">Verwalte deinen Benutzernamen, dein Profilbild und deine Biografie.</p>
             <ProfileEditor onProfileSaved={handleOwnProfileSaved} />
+          </section>
+        )}
+
+        {!loading && profileTotals.games > 0 && (
+          <section className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-5" aria-label="Spielstatistik">
+            {[
+              { label: "Gewertete Partien", value: profileTotals.games },
+              { label: "Siege", value: profileTotals.wins },
+              { label: "Remis", value: profileTotals.draws },
+              { label: "Niederlagen", value: profileTotals.losses },
+              { label: "Siegquote", value: `${winRate}%` },
+            ].map((stat) => (
+              <article key={stat.label} className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+                <p className="text-xs text-slate-400">{stat.label}</p>
+                <p className="mt-1 text-2xl font-bold tabular-nums text-emerald-300">{stat.value}</p>
+              </article>
+            ))}
           </section>
         )}
 

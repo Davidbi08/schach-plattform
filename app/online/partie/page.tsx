@@ -8,8 +8,8 @@ import { createClient } from "@/lib/supabase/client";
 import { ChessPieceIcon } from "@/components/chess-piece";
 import { describeMaterialAdvantage, getMaterialAdvantage } from "@/lib/chess/material";
 import { formatClock, getOnlineRatingMode, getOnlineRatingModeLabel, type OnlineRatingMode } from "../protocol";
-import { saveOnlineGame, type SavedMove } from "../history-store";
-type MatchConfig = { room: string; player: string; opponent: string; white: boolean; initialSeconds: number; incrementSeconds: number; ratingMode: OnlineRatingMode; whiteName: string; blackName: string };
+import { saveOnlineGame, type OnlineGameRecord, type SavedMove } from "../history-store";
+type MatchConfig = { room: string; player: string; opponent: string; white: boolean; initialSeconds: number; incrementSeconds: number; ratingMode: OnlineRatingMode; rated: boolean; whiteName: string; blackName: string };
 type ClockState = { whiteMs: number; blackMs: number; lastTick: number };
 type MovePayload = { from: string; to: string; promotion?: string; by: string; whiteMs: number; blackMs: number };
 type MatchEnd = { result: "1-0" | "0-1" | "1/2-1/2"; reason: string };
@@ -22,6 +22,10 @@ function moveSnapshot(game: Chess): SavedMove[] {
     to: move.to,
     ...(move.promotion ? { promotion: move.promotion } : {}),
   }));
+}
+
+function monotonicNow() {
+  return performance.now();
 }
 
 function gameFromMoves(moves: SavedMove[]) {
@@ -46,6 +50,7 @@ export default function OnlineGamePage() {
   const clocksRef = useRef<ClockState>({ whiteMs: 0, blackMs: 0, lastTick: 0 });
   const [finished, setFinished] = useState<MatchEnd | null>(null);
     const [ratingMessage, setRatingMessage] = useState("");
+    const [archiveMessage, setArchiveMessage] = useState("");
   const finishedRef = useRef<MatchEnd | null>(null);
   const finishGameRef = useRef<(end: MatchEnd, broadcast?: boolean) => void>(() => undefined);
   const channelRef = useRef<RealtimeChannel | null>(null);
@@ -61,6 +66,7 @@ export default function OnlineGamePage() {
   );
 
   useEffect(() => {
+    let active = true;
     const params = new URLSearchParams(window.location.search);
     const room = params.get("room") ?? "";
     const player = params.get("player") ?? "";
@@ -68,37 +74,46 @@ export default function OnlineGamePage() {
     const white = params.get("white") === "true";
     const initialSeconds = Number(params.get("initial"));
     const incrementSeconds = Number(params.get("increment"));
+    const rated = params.get("rated") !== "false";
     const safeName = (value: string | null) => value?.trim().slice(0, 20) || "Gast";
     const whiteName = safeName(params.get("whiteName"));
     const blackName = safeName(params.get("blackName"));
     const expectedRoom = [player, opponent].sort().join("_");
 
     if (!player || !opponent || !room || room !== expectedRoom || !Number.isFinite(initialSeconds) || initialSeconds < 30 || !Number.isFinite(incrementSeconds) || incrementSeconds < 0 || incrementSeconds > 60) {
-      setPageError("Diese Partie-Adresse ist unvollständig. Bitte suche erneut nach einem Gegner.");
+      queueMicrotask(() => {
+        if (active) setPageError("Diese Partie-Adresse ist unvollständig. Bitte suche erneut nach einem Gegner.");
+      });
       return;
     }
 
     const ratingMode = getOnlineRatingMode(initialSeconds, incrementSeconds);
-    const matchConfig = { room, player, opponent, white, initialSeconds, incrementSeconds, ratingMode, whiteName, blackName };
-    setConfig(matchConfig);
-    gameRef.current = new Chess();
-    setGame(gameRef.current);
-    movesRef.current = [];
-    setMoves([]);
-    setViewPly(null);
-    finishedRef.current = null;
-    setFinished(null);
-    startedRef.current = false;
-    const initialMs = initialSeconds * 1000;
-    clocksRef.current = { whiteMs: initialMs, blackMs: initialMs, lastTick: 0 };
-    setClocks({ whiteMs: initialMs, blackMs: initialMs });
+    const matchConfig = { room, player, opponent, white, initialSeconds, incrementSeconds, ratingMode, rated, whiteName, blackName };
+    queueMicrotask(() => {
+      if (!active) return;
+      setConfig(matchConfig);
+      gameRef.current = new Chess();
+      setGame(gameRef.current);
+      movesRef.current = [];
+      setMoves([]);
+      setViewPly(null);
+      finishedRef.current = null;
+      setFinished(null);
+      startedRef.current = false;
+      const initialMs = initialSeconds * 1000;
+      clocksRef.current = { whiteMs: initialMs, blackMs: initialMs, lastTick: 0 };
+      setClocks({ whiteMs: initialMs, blackMs: initialMs });
+    });
+    return () => {
+      active = false;
+    };
   }, []);
 
   function saveEnd(end: MatchEnd, match: MatchConfig) {
     const wonColor = end.result === "1-0" ? "w" : end.result === "0-1" ? "b" : null;
-    const myColor = match.white ? "w" : "b";
-    const result = wonColor === null ? "draw" : wonColor === myColor ? "win" : "loss";
-    saveOnlineGame({
+    const myColor: OnlineGameRecord["color"] = match.white ? "w" : "b";
+    const result: OnlineGameRecord["result"] = wonColor === null ? "draw" : wonColor === myColor ? "win" : "loss";
+    const record = {
       id: match.room,
       playedAt: new Date().toISOString(),
       timeControl: `${Math.floor(match.initialSeconds / 60)}+${match.incrementSeconds}`,
@@ -109,10 +124,32 @@ export default function OnlineGamePage() {
       resultText: result === "win" ? "Gewonnen" : result === "loss" ? "Verloren" : "Remis",
       reason: end.reason,
       moves: movesRef.current,
-    });
+    };
+    saveOnlineGame(record);
+    void (async () => {
+      try {
+        const supabase = createClient();
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        if (authError) throw authError;
+        if (!user) {
+          setArchiveMessage("Diese Partie wurde auf diesem Gerät gespeichert. Melde dich an, damit dein Verlauf synchronisiert wird.");
+          return;
+        }
+        const { error } = await supabase.rpc("save_my_online_game", { p_record: record });
+        if (error) throw error;
+        setArchiveMessage("Partie im Konto gespeichert und synchronisiert.");
+      } catch (error) {
+        console.error("Partie konnte nicht mit dem Konto synchronisiert werden:", error);
+        setArchiveMessage("Partie auf diesem Gerät gespeichert; die Kontosynchronisierung ist fehlgeschlagen.");
+      }
+    })();
   }
 
   async function saveOnlineRating(end: MatchEnd, match: MatchConfig) {
+    if (!match.rated) {
+      setRatingMessage("Turnierpartie · Elo wird nach beidseitiger Ergebnisbestätigung verbucht.");
+      return;
+    }
     try {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
@@ -155,7 +192,9 @@ function finishGame(end: MatchEnd, broadcast = false) {
       void channelRef.current.send({ type: "broadcast", event: "game-end", payload: { by: config.player, ...end } });
     }
   }
-  finishGameRef.current = finishGame;
+  useEffect(() => {
+    finishGameRef.current = finishGame;
+  });
 
   useEffect(() => {
     if (!config) return;
@@ -180,7 +219,7 @@ function finishGame(end: MatchEnd, broadcast = false) {
       setOpponentOnline(connectedPlayers.includes(config.opponent));
       if (bothConnected && !startedRef.current && !finishedRef.current) {
         startedRef.current = true;
-        clocksRef.current.lastTick = performance.now();
+        clocksRef.current.lastTick = monotonicNow();
         setStarted(true);
       }
       if (bothConnected) askForSnapshot();
@@ -219,7 +258,7 @@ function finishGame(end: MatchEnd, broadcast = false) {
         const whiteMs = Number(payload.whiteMs);
         const blackMs = Number(payload.blackMs);
         if (Number.isFinite(whiteMs) && Number.isFinite(blackMs)) {
-          clocksRef.current = { whiteMs, blackMs, lastTick: performance.now() };
+          clocksRef.current = { whiteMs, blackMs, lastTick: monotonicNow() };
           setClocks({ whiteMs, blackMs });
         }
         if (payload.finished && (payload.finished.result === "1-0" || payload.finished.result === "0-1" || payload.finished.result === "1/2-1/2")) {
@@ -240,7 +279,7 @@ function finishGame(end: MatchEnd, broadcast = false) {
         movesRef.current = moveSnapshot(current);
         setMoves(movesRef.current);
         if (Number.isFinite(payload.whiteMs) && Number.isFinite(payload.blackMs)) {
-          clocksRef.current = { whiteMs: payload.whiteMs, blackMs: payload.blackMs, lastTick: performance.now() };
+          clocksRef.current = { whiteMs: payload.whiteMs, blackMs: payload.blackMs, lastTick: monotonicNow() };
           setClocks({ whiteMs: payload.whiteMs, blackMs: payload.blackMs });
         }
         if (current.isCheckmate()) finishGameRef.current({ result: current.turn() === "w" ? "0-1" : "1-0", reason: "Schachmatt" }, true);
@@ -286,7 +325,7 @@ function finishGame(end: MatchEnd, broadcast = false) {
     if (!started || !config || config.initialSeconds === 0) return;
     const timer = window.setInterval(() => {
       if (!startedRef.current || finishedRef.current) return;
-      const now = performance.now();
+      const now = monotonicNow();
       const elapsed = Math.max(0, now - clocksRef.current.lastTick);
       clocksRef.current.lastTick = now;
       const key = gameRef.current.turn() === "w" ? "whiteMs" : "blackMs";
@@ -303,7 +342,7 @@ function finishGame(end: MatchEnd, broadcast = false) {
 
   function advanceClockBeforeMove() {
     if (!config || config.initialSeconds === 0) return;
-    const now = performance.now();
+    const now = monotonicNow();
     const elapsed = Math.max(0, now - clocksRef.current.lastTick);
     clocksRef.current.lastTick = now;
     const key = gameRef.current.turn() === "w" ? "whiteMs" : "blackMs";
@@ -327,7 +366,7 @@ function finishGame(end: MatchEnd, broadcast = false) {
         const key = move.color === "w" ? "whiteMs" : "blackMs";
         clocksRef.current[key] += config.incrementSeconds * 1000;
       }
-      clocksRef.current.lastTick = performance.now();
+      clocksRef.current.lastTick = monotonicNow();
       gameRef.current = current;
       setGame(new Chess(current.fen()));
       movesRef.current = moveSnapshot(current);
@@ -489,7 +528,7 @@ function finishGame(end: MatchEnd, broadcast = false) {
                 <button type="button" onClick={resign} disabled={!started} className="w-full rounded-xl border border-rose-950 px-4 py-3 text-sm font-semibold text-rose-300 hover:bg-rose-950/40 disabled:cursor-not-allowed disabled:opacity-50">Aufgeben</button>
               </section>
             ) : (
-              <div className="rounded-2xl border border-emerald-900 bg-emerald-950/30 p-4"><p className="font-bold text-emerald-200">Partie beendet</p>{ratingMessage && <p className="mt-1 text-sm text-emerald-200">{ratingMessage}</p>}<p className="mt-1 text-sm text-slate-300">Das Ergebnis wurde im Partieverlauf auf diesem Gerät gespeichert.</p><Link href="/partien" className="mt-4 inline-flex font-semibold text-emerald-300 underline underline-offset-4">Zum Partieverlauf</Link></div>
+              <div className="rounded-2xl border border-emerald-900 bg-emerald-950/30 p-4"><p className="font-bold text-emerald-200">Partie beendet</p>{ratingMessage && <p className="mt-1 text-sm text-emerald-200">{ratingMessage}</p>}<p className="mt-1 text-sm text-slate-300">{archiveMessage || "Partie auf diesem Gerät gespeichert …"}</p><Link href="/partien" className="mt-4 inline-flex font-semibold text-emerald-300 underline underline-offset-4">Zum Partieverlauf</Link></div>
             )}
           </aside>
         </div>

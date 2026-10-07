@@ -43,6 +43,12 @@ Für Kontosperren muss zusätzlich `SUPABASE_SERVICE_ROLE_KEY` als **serverseiti
 
 Supportanfragen unter `/support` verwenden zusätzlich die Migration `20261007000009_private_support_inbox.sql`. Nutzer sehen nur ihre eigenen Anfragen und Antworten; im Adminbereich sind Supportinhalte ausschließlich für Rollen `owner` und `admin` lesbar (nicht für Moderatoren oder andere Nutzer). Nachrichten und Statusänderungen laufen über zugriffsgeschützte RPCs und Adminantworten/-statusänderungen werden protokolliert.
 
+Der Menüpunkt `/tournaments` stellt private, angemeldeten Nutzern vorbehaltene Rundenturniere bereit. Dazu muss zusätzlich `20261007000010_tournaments.sql` nach den vorherigen Migrationen ausgeführt werden. Beide Teilnehmer müssen dasselbe Ergebnis melden; dann wird die Elo beider Spieler genau einmal über die normale Elo-Funktion im zur Zeitkontrolle passenden Modus (Bullet, Blitz, Rapid oder Klassisch) aktualisiert. Ergebnisse werden nicht automatisch vom Partie-Server geprüft.
+
+`20261007000011_account_improvements.sql` aktiviert Herausforderungen unter Freunden, private Blockierungen, kontoübergreifende Online-Partieverläufe und Support-Antwortbenachrichtigungen. Führe die Migration nach `20261007000010_tournaments.sql` aus. Blockieren entfernt auch eine bestehende Freundschaft; nach dem Entblocken muss eine Freundschaft neu angefragt werden.
+
+Das Taktiktraining bietet zusätzlich eine tägliche, für alle gleiche Aufgabe, Serien, Abzeichen und ein Monatsziel. Diese Lernfortschritte werden wie die bisherige Taktik-Elo lokal im Browser gespeichert und nicht zwischen Geräten synchronisiert. `/repertoire` enthält geführte Beispielvarianten; Profilstatistiken fassen die gewerteten Online-Partien nach Siegen, Remis, Niederlagen und Siegquote zusammen.
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
