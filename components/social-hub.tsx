@@ -1,14 +1,28 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useDirectMessageNotifications } from "@/components/direct-message-notifications";
+import { ONLINE_TIME_CONTROLS } from "@/app/online/protocol";
 
 type SocialTab = "friends" | "global";
 type Person = { id: string; username: string; bio?: string; avatar_url?: string | null };
 type FriendRequest = Person & { request_id: string; status: string; direction: "incoming" | "outgoing"; created_at: string };
 type ChatMessage = { id: string; sender_id: string; username: string; avatar_url: string | null; body: string; created_at: string };
+type BlockedUser = { user_id: string; username: string; created_at: string };
+type ChessChallenge = {
+  challenge_id: string;
+  challenger_id: string;
+  challenged_id: string;
+  challenger_username: string;
+  challenged_username: string;
+  initial_seconds: number;
+  increment_seconds: number;
+  status: "pending" | "accepted";
+  created_at: string;
+};
 
 function needsSocialMigrations(error: unknown) {
   if (!error || typeof error !== "object") return false;
@@ -26,6 +40,7 @@ function Avatar({ person, size = "h-10 w-10" }: { person: Pick<Person, "username
 function messageText(error: { message: string } | null, fallback: string) {
   if (!error) return fallback;
   if (error.message.includes("Private Nachrichten")) return "Private Nachrichten sind nur zwischen bestätigten Freunden möglich.";
+  if (error.message.includes("Blockierung") || error.message.includes("blockiert")) return "Für diesen Spieler besteht eine Blockierung.";
   if (error.message.includes("viele Nachrichten")) return "Du hast gerade viele Nachrichten gesendet. Bitte warte kurz.";
   return fallback;
 }
@@ -36,6 +51,9 @@ export function SocialHub({ initialTab = "friends" }: { initialTab?: SocialTab }
   const [userId, setUserId] = useState<string | null>(null);
   const [friends, setFriends] = useState<Person[]>([]);
   const [requests, setRequests] = useState<FriendRequest[]>([]);
+  const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([]);
+  const [challenges, setChallenges] = useState<ChessChallenge[]>([]);
+  const [challengeControlId, setChallengeControlId] = useState("5+3");
   const [search, setSearch] = useState("");
   const [results, setResults] = useState<Person[]>([]);
   const [searching, setSearching] = useState(false);
@@ -46,6 +64,7 @@ export function SocialHub({ initialTab = "friends" }: { initialTab?: SocialTab }
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const router = useRouter();
   const supabaseRef = useRef<ReturnType<typeof createClient> | null>(null);
   const getSupabase = useCallback(() => {
     if (!supabaseRef.current) supabaseRef.current = createClient();
@@ -62,6 +81,18 @@ export function SocialHub({ initialTab = "friends" }: { initialTab?: SocialTab }
     if (requestError) throw requestError;
     setFriends((friendData ?? []) as Person[]);
     setRequests((requestData ?? []) as FriendRequest[]);
+  }, [getSupabase]);
+
+  const loadBlockedUsers = useCallback(async () => {
+    const { data, error: blockedError } = await getSupabase().rpc("list_my_blocked_users");
+    if (blockedError) throw blockedError;
+    setBlockedUsers((data ?? []) as BlockedUser[]);
+  }, [getSupabase]);
+
+  const loadChallenges = useCallback(async () => {
+    const { data, error: challengeError } = await getSupabase().rpc("list_my_chess_challenges");
+    if (challengeError) throw challengeError;
+    setChallenges((data ?? []) as ChessChallenge[]);
   }, [getSupabase]);
 
   const loadMessages = useCallback(async () => {
@@ -94,7 +125,7 @@ export function SocialHub({ initialTab = "friends" }: { initialTab?: SocialTab }
         const { data: { user } } = await getSupabase().auth.getUser();
         if (!active) return;
         setUserId(user?.id ?? null);
-        if (user) await loadFriends();
+        if (user) await Promise.all([loadFriends(), loadBlockedUsers(), loadChallenges()]);
       } catch (loadError) {
         if (active) setError(needsSocialMigrations(loadError)
           ? "Die Community-Funktionen sind in der Datenbank noch nicht eingerichtet. Bitte wende die Supabase-Migrationen an."
@@ -105,7 +136,119 @@ export function SocialHub({ initialTab = "friends" }: { initialTab?: SocialTab }
     }
     void initialize();
     return () => { active = false; };
-  }, [getSupabase, loadFriends]);
+  }, [getSupabase, loadBlockedUsers, loadChallenges, loadFriends]);
+
+  useEffect(() => {
+    if (!userId) return;
+    const refresh = () => {
+      void loadChallenges().catch((challengeError) => {
+        console.error("Freundschaftsherausforderungen konnten nicht aktualisiert werden:", challengeError);
+      });
+    };
+    const interval = window.setInterval(refresh, 10000);
+    return () => window.clearInterval(interval);
+  }, [loadChallenges, userId]);
+
+  async function challengeFriend(friend: Person) {
+    const control = ONLINE_TIME_CONTROLS.find((item) => item.id === challengeControlId);
+    if (!control) return;
+    setError("");
+    try {
+      const { error: challengeError } = await getSupabase().rpc("create_chess_challenge", {
+        p_target_user_id: friend.id,
+        p_initial_seconds: control.initialSeconds,
+        p_increment_seconds: control.incrementSeconds,
+      });
+      if (challengeError) throw challengeError;
+      setError(`Herausforderung an ${friend.username} gesendet (${control.label}).`);
+      await loadChallenges();
+    } catch (challengeError) {
+      console.error("Schachherausforderung konnte nicht gesendet werden:", challengeError);
+      setError(challengeError instanceof Error ? challengeError.message : "Herausforderung konnte nicht gesendet werden.");
+    }
+  }
+
+  async function respondToChallenge(challenge: ChessChallenge, accept: boolean) {
+    try {
+      const { data, error: responseError } = await getSupabase().rpc("respond_chess_challenge", {
+        p_challenge_id: challenge.challenge_id,
+        p_accept: accept,
+      });
+      if (responseError) throw responseError;
+      if (!accept) {
+        setError("Herausforderung abgelehnt.");
+        await loadChallenges();
+        return;
+      }
+      const accepted = (data ?? [])[0] as {
+        challenge_id: string;
+        challenger_id: string;
+        challenged_id: string;
+        challenger_username: string;
+        challenged_username: string;
+        initial_seconds: number;
+        increment_seconds: number;
+      } | undefined;
+      if (!accepted) throw new Error("Herausforderung angenommen, aber Partiedaten fehlen.");
+      setChallenges((current) => current.filter((item) => item.challenge_id !== challenge.challenge_id));
+      openChallenge(accepted);
+    } catch (responseError) {
+      console.error("Herausforderung konnte nicht beantwortet werden:", responseError);
+      setError(responseError instanceof Error ? responseError.message : "Herausforderung konnte nicht beantwortet werden.");
+    }
+  }
+
+  function openChallenge(challenge: {
+    challenge_id: string;
+    challenger_id: string;
+    challenged_id: string;
+    challenger_username: string;
+    challenged_username: string;
+    initial_seconds: number;
+    increment_seconds: number;
+  }) {
+    if (!userId) return;
+    const whiteId = `${challenge.challenge_id}_white`;
+    const blackId = `${challenge.challenge_id}_black`;
+    const white = userId === challenge.challenger_id;
+    const params = new URLSearchParams({
+      room: [whiteId, blackId].sort().join("_"),
+      player: white ? whiteId : blackId,
+      opponent: white ? blackId : whiteId,
+      white: String(white),
+      initial: String(challenge.initial_seconds),
+      increment: String(challenge.increment_seconds),
+      whiteName: challenge.challenger_username,
+      blackName: challenge.challenged_username,
+    });
+    router.push("/online/partie?" + params.toString());
+  }
+
+  async function blockUser(person: Pick<Person, "id" | "username">) {
+    if (!window.confirm(`${person.username} blockieren? Die Freundschaft wird entfernt und private Nachrichten werden für beide Konten gesperrt.`)) return;
+    try {
+      const { error: blockError } = await getSupabase().rpc("block_user", { p_user_id: person.id });
+      if (blockError) throw blockError;
+      if (activeFriend?.id === person.id) setActiveFriend(null);
+      setError(`${person.username} wurde blockiert.`);
+      await Promise.all([loadFriends(), loadBlockedUsers()]);
+    } catch (blockError) {
+      console.error("Nutzer konnte nicht blockiert werden:", blockError);
+      setError("Nutzer konnte nicht blockiert werden. Wurde die Sicherheitsmigration angewendet?");
+    }
+  }
+
+  async function unblockUser(user: BlockedUser) {
+    try {
+      const { error: unblockError } = await getSupabase().rpc("unblock_user", { p_user_id: user.user_id });
+      if (unblockError) throw unblockError;
+      setError(`${user.username} wurde entblockt. Eine entfernte Freundschaft muss neu angefragt werden.`);
+      await loadBlockedUsers();
+    } catch (unblockError) {
+      console.error("Nutzer konnte nicht entblockt werden:", unblockError);
+      setError("Blockierung konnte nicht aufgehoben werden.");
+    }
+  }
 
   useEffect(() => {
     if (!userId || (tab === "friends" && !activeFriend)) {
@@ -240,7 +383,7 @@ export function SocialHub({ initialTab = "friends" }: { initialTab?: SocialTab }
                 <input id="player-search" value={search} onChange={(event) => setSearch(event.target.value)} maxLength={20} placeholder="Benutzername" className="min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none focus:border-emerald-400" />
                 <button type="submit" disabled={searching} className="rounded-lg border border-slate-700 px-3 py-2 text-sm hover:bg-slate-800 disabled:opacity-50">{searching ? "Sucht …" : "Suchen"}</button>
               </div>
-              {results.length > 0 && <ul className="mt-3 space-y-2">{results.map((person) => <li key={person.id} className="flex items-center gap-2 rounded-lg bg-slate-800/70 p-2"><Link href={`/profile/${encodeURIComponent(person.username)}`} className="flex min-w-0 flex-1 items-center gap-2"><Avatar person={person} size="h-8 w-8" /><span className="truncate text-sm">{person.username}</span></Link><button type="button" onClick={() => void requestFriend(person.username)} className="rounded-md bg-emerald-400 px-2 py-1 text-xs font-semibold text-slate-950">Hinzufügen</button></li>)}</ul>}
+              {results.length > 0 && <ul className="mt-3 space-y-2">{results.map((person) => <li key={person.id} className="flex items-center gap-2 rounded-lg bg-slate-800/70 p-2"><Link href={`/profile/${encodeURIComponent(person.username)}`} className="flex min-w-0 flex-1 items-center gap-2"><Avatar person={person} size="h-8 w-8" /><span className="truncate text-sm">{person.username}</span></Link><button type="button" onClick={() => void requestFriend(person.username)} className="rounded-md bg-emerald-400 px-2 py-1 text-xs font-semibold text-slate-950">Hinzufügen</button><button type="button" onClick={() => void blockUser(person)} className="rounded-md border border-rose-900 px-2 py-1 text-xs text-rose-300">Blockieren</button></li>)}</ul>}
               {!searching && !error && search.trim().length >= 3 && results.length === 0 && <p className="mt-3 text-sm text-slate-500">Keine Spieler gefunden.</p>}
             </form>
 
@@ -250,7 +393,23 @@ export function SocialHub({ initialTab = "friends" }: { initialTab?: SocialTab }
             </section>
 
             <section className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
-              <h2 className="font-semibold">Deine Freunde</h2>
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="font-semibold">Schachherausforderungen</h2>
+                <button type="button" onClick={() => void loadChallenges()} className="text-xs text-slate-400 underline">Aktualisieren</button>
+              </div>
+              {challenges.length === 0 ? <p className="mt-3 text-sm text-slate-500">Keine offenen Herausforderungen.</p> : <ul className="mt-3 space-y-2">{challenges.map((challenge) => {
+                const incoming = challenge.challenged_id === userId;
+                const otherName = incoming ? challenge.challenger_username : challenge.challenged_username;
+                return <li key={challenge.challenge_id} className="rounded-lg bg-slate-800/70 p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-sm font-medium">{incoming ? "Von " : "An "}{otherName} · {Math.floor(challenge.initial_seconds / 60)}+{challenge.increment_seconds}</span><span className="text-[10px] text-slate-400">{challenge.status === "accepted" ? "Angenommen" : "Ausstehend"}</span></div>
+                  {challenge.status === "pending" && incoming && <div className="mt-2 flex gap-2"><button type="button" onClick={() => void respondToChallenge(challenge, true)} className="rounded-md bg-emerald-400 px-3 py-1.5 text-xs font-semibold text-slate-950">Annehmen & spielen</button><button type="button" onClick={() => void respondToChallenge(challenge, false)} className="rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-300">Ablehnen</button></div>}
+                  {challenge.status === "accepted" && <button type="button" onClick={() => openChallenge(challenge)} className="mt-2 rounded-md bg-emerald-400 px-3 py-1.5 text-xs font-semibold text-slate-950">Partie öffnen</button>}
+                </li>;
+              })}</ul>}
+            </section>
+
+            <section className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+              <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="font-semibold">Deine Freunde</h2><label className="flex items-center gap-2 text-xs text-slate-400">Zeit<select value={challengeControlId} onChange={(event) => setChallengeControlId(event.target.value)} className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-slate-200">{ONLINE_TIME_CONTROLS.map((control) => <option key={control.id} value={control.id}>{control.label}</option>)}</select></label></div>
               {friends.length === 0 ? <p className="mt-3 text-sm text-slate-500">Noch keine Freunde – suche nach einem Spielernamen.</p> : <ul className="mt-3 space-y-2">{friends.map((friend) => <li key={friend.id} className="flex items-center gap-2 rounded-lg p-2 hover:bg-slate-800/60">
                 <Link href={`/profile/${encodeURIComponent(friend.username)}`} className="flex min-w-0 flex-1 items-center gap-2" aria-label={`Profil von ${friend.username} öffnen`}>
                   <Avatar person={friend} size="h-8 w-8" />
@@ -258,8 +417,14 @@ export function SocialHub({ initialTab = "friends" }: { initialTab?: SocialTab }
                 </Link>
               {unreadByFriend[friend.id] && <span aria-label={`${unreadByFriend[friend.id].unread_count} ungelesene Nachrichten`} className="rounded-full bg-emerald-400 px-2 py-0.5 text-[10px] font-bold text-slate-950">{unreadByFriend[friend.id].unread_count}</span>}
               <button type="button" onClick={() => { setActiveFriend(friend); setTab("friends"); }} className={`rounded-md px-2 py-1 text-xs font-medium ${activeFriend?.id === friend.id ? "bg-emerald-400 text-slate-950" : "border border-slate-700 text-slate-300 hover:bg-slate-800"}`}>Chat</button>
+              <button type="button" onClick={() => void challengeFriend(friend)} className="rounded-md border border-emerald-400/40 px-2 py-1 text-xs text-emerald-200">Herausfordern</button>
                 <button type="button" onClick={() => void removeFriend(friend)} aria-label={`${friend.username} als Freund entfernen`} className="px-2 text-xs text-slate-500 hover:text-rose-300">Entfernen</button>
+                <button type="button" onClick={() => void blockUser(friend)} aria-label={`${friend.username} blockieren`} className="px-2 text-xs text-rose-300 hover:text-rose-200">Blockieren</button>
               </li>)}</ul>}
+            </section>
+            <section className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+              <h2 className="font-semibold">Blockierte Nutzer</h2>
+              {blockedUsers.length === 0 ? <p className="mt-3 text-sm text-slate-500">Keine Nutzer blockiert.</p> : <ul className="mt-3 space-y-2">{blockedUsers.map((person) => <li key={person.user_id} className="flex items-center justify-between gap-3 rounded-lg bg-slate-800/60 p-2"><span className="truncate text-sm">{person.username}</span><button type="button" onClick={() => void unblockUser(person)} className="shrink-0 text-xs text-emerald-300 underline">Entblocken</button></li>)}</ul>}
             </section>
           </section>
 

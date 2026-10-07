@@ -3,6 +3,9 @@ export type SavedTacticsProgress = {
   solved: number;
   attempted: number;
   recent: string[];
+  lastDailyDate: string | null;
+  dailyStreak: number;
+  dailyDates: string[];
 };
 
 export const INITIAL_TACTICS_PROGRESS: SavedTacticsProgress = {
@@ -10,6 +13,9 @@ export const INITIAL_TACTICS_PROGRESS: SavedTacticsProgress = {
   solved: 0,
   attempted: 0,
   recent: [],
+  lastDailyDate: null,
+  dailyStreak: 0,
+  dailyDates: [],
 };
 
 const STORAGE_KEY = "schach-taktik-progress-v1";
@@ -28,6 +34,13 @@ function readProgress(): SavedTacticsProgress {
       recent: Array.isArray(saved.recent)
         ? saved.recent.filter((id): id is string => typeof id === "string").slice(-12)
         : [],
+      lastDailyDate: typeof saved.lastDailyDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(saved.lastDailyDate)
+        ? saved.lastDailyDate
+        : null,
+      dailyStreak: Math.max(0, Number(saved.dailyStreak) || 0),
+      dailyDates: Array.isArray(saved.dailyDates)
+        ? [...new Set(saved.dailyDates.filter((date): date is string => typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)))].slice(-60)
+        : [],
     };
   } catch {
     return INITIAL_TACTICS_PROGRESS;
@@ -37,6 +50,24 @@ function readProgress(): SavedTacticsProgress {
 export function getTacticsProgress(): SavedTacticsProgress {
   cachedProgress ??= readProgress();
   return cachedProgress;
+}
+
+export function recordDailyTacticsCompletion(
+  current: SavedTacticsProgress,
+  dateKey: string,
+): SavedTacticsProgress {
+  if (current.dailyDates.includes(dateKey)) return current;
+
+  const previousDate = new Date(`${dateKey}T00:00:00.000Z`);
+  previousDate.setUTCDate(previousDate.getUTCDate() - 1);
+  const yesterday = previousDate.toISOString().slice(0, 10);
+
+  return {
+    ...current,
+    lastDailyDate: dateKey,
+    dailyStreak: current.lastDailyDate === yesterday ? current.dailyStreak + 1 : 1,
+    dailyDates: [...current.dailyDates, dateKey].slice(-60),
+  };
 }
 
 export function subscribeToTacticsProgress(onChange: () => void): () => void {

@@ -11,6 +11,12 @@ export type TacticsPuzzle = {
 export const tacticsPuzzles: TacticsPuzzle[] = puzzleData;
 export const tacticsPreviewFen = tacticsPuzzles[0].fen;
 
+export function getDailyTacticsPuzzle(dateKey: string): TacticsPuzzle {
+  let hash = 0;
+  for (const character of dateKey) hash = (hash * 31 + character.charCodeAt(0)) >>> 0;
+  return tacticsPuzzles[hash % tacticsPuzzles.length];
+}
+
 export function getTacticsPuzzleForRating(rating: number, recent: string[]): TacticsPuzzle {
   const unseen = tacticsPuzzles.filter((puzzle) => !recent.includes(puzzle.id));
   const available = unseen.length > 0 ? unseen : tacticsPuzzles;
