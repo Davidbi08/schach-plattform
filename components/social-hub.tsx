@@ -273,6 +273,7 @@ export function SocialHub({ initialTab = "friends" }: { initialTab?: SocialTab }
             sending={sending}
             maxLength={2000}
             emptyText={activeFriend ? "Schreib deinem Freund eine Nachricht." : "Wähle links einen Freund aus, um privat zu schreiben."}
+            chatType="direct"
             onBack={() => setActiveFriend(null)}
             showBack={Boolean(activeFriend)}
           />
@@ -280,14 +281,14 @@ export function SocialHub({ initialTab = "friends" }: { initialTab?: SocialTab }
       )}
 
       {tab === "global" && (
-        <ChatPanel title="Globaler Schach-Chat" messages={visibleMessages} userId={userId} draft={draft} onDraft={setDraft} onSubmit={sendMessage} sending={sending} maxLength={500} emptyText="Noch keine Nachrichten. Starte das Gespräch respektvoll – und bleib beim Schach." />
+        <ChatPanel title="Globaler Schach-Chat" messages={visibleMessages} userId={userId} draft={draft} onDraft={setDraft} onSubmit={sendMessage} sending={sending} maxLength={500} emptyText="Noch keine Nachrichten. Starte das Gespräch respektvoll – und bleib beim Schach." chatType="global" />
       )}
     </div>
   );
 }
 
 function ChatPanel({
-  title, messages, userId, draft, onDraft, onSubmit, sending, maxLength, emptyText, onBack, showBack = false,
+  title, messages, userId, draft, onDraft, onSubmit, sending, maxLength, emptyText, chatType, onBack, showBack = false,
 }: {
   title: string;
   messages: ChatMessage[];
@@ -298,9 +299,35 @@ function ChatPanel({
   sending: boolean;
   maxLength: number;
   emptyText: string;
+  chatType: "global" | "direct";
   onBack?: () => void;
   showBack?: boolean;
 }) {
+  const [reportingMessageId, setReportingMessageId] = useState<string | null>(null);
+  const [reportReason, setReportReason] = useState("");
+  const [reportFeedback, setReportFeedback] = useState("");
+  const [reportedIds, setReportedIds] = useState<string[]>([]);
+  async function reportMessage(messageId: string) {
+    const reason = reportReason.trim();
+    if (reason.length < 5) {
+      setReportFeedback("Bitte beschreibe den Grund mit mindestens fünf Zeichen.");
+      return;
+    }
+    const { error } = await createClient().rpc("report_chat_message", {
+      p_chat_type: chatType,
+      p_message_id: messageId,
+      p_reason: reason,
+    });
+    if (error) {
+      setReportFeedback(error.message.includes("bereits gemeldet") ? "Diese Nachricht wurde bereits gemeldet." : "Die Meldung konnte nicht gesendet werden.");
+      return;
+    }
+    setReportedIds((current) => [...current, messageId]);
+    setReportingMessageId(null);
+    setReportReason("");
+    setReportFeedback("Danke. Deine Meldung wurde an die Moderation weitergeleitet.");
+  }
+
   return (
     <section className="flex min-h-[32rem] flex-col rounded-2xl border border-slate-800 bg-slate-900 p-4 sm:p-5">
       <div className="flex items-center justify-between gap-3 border-b border-slate-800 pb-3">
@@ -317,10 +344,17 @@ function ChatPanel({
             <div className={`max-w-[85%] rounded-xl px-3 py-2 ${message.sender_id === userId ? "bg-emerald-950/60 text-emerald-50" : "bg-slate-800 text-slate-200"}`}>
               <div className="mb-1 flex items-baseline gap-2"><Link href={`/profile/${encodeURIComponent(message.username)}`} className="text-xs font-semibold hover:underline">{message.username}</Link><time dateTime={message.created_at} className="text-[10px] text-slate-500">{new Date(message.created_at).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}</time></div>
               <p className="whitespace-pre-wrap break-words text-sm">{message.body}</p>
+              {message.sender_id !== userId && !reportedIds.includes(message.id) && <button type="button" onClick={() => { setReportingMessageId(reportingMessageId === message.id ? null : message.id); setReportFeedback(""); }} className="mt-2 text-[10px] text-slate-400 underline underline-offset-2 hover:text-amber-300">Melden</button>}
+              {reportingMessageId === message.id && <form onSubmit={(event) => { event.preventDefault(); void reportMessage(message.id); }} className="mt-2 space-y-2">
+                <label className="sr-only" htmlFor={`report-${message.id}`}>Grund der Meldung</label>
+                <textarea id={`report-${message.id}`} value={reportReason} onChange={(event) => setReportReason(event.target.value)} minLength={5} maxLength={500} rows={2} placeholder="Warum meldest du diese Nachricht?" className="w-full rounded-md border border-slate-700 bg-slate-950 p-2 text-xs" />
+                <div className="flex gap-2"><button type="submit" className="rounded bg-amber-400 px-2 py-1 text-xs font-semibold text-slate-950">Meldung senden</button><button type="button" onClick={() => setReportingMessageId(null)} className="text-xs text-slate-400 underline">Abbrechen</button></div>
+              </form>}
             </div>
           </article>
         ))}
       </div>
+      {reportFeedback && <p role="status" className="border-t border-slate-800 py-2 text-xs text-slate-300">{reportFeedback}</p>}
       <form onSubmit={onSubmit} className="border-t border-slate-800 pt-3">
         <label htmlFor={`message-${title}`} className="sr-only">Nachricht schreiben</label>
         <textarea id={`message-${title}`} value={draft} onChange={(event) => onDraft(event.target.value)} maxLength={maxLength} rows={2} placeholder="Nachricht schreiben …" className="w-full resize-y rounded-lg border border-slate-700 bg-slate-950 p-3 text-sm outline-none focus:border-emerald-400" />
