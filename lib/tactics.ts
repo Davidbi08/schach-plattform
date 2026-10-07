@@ -6,7 +6,6 @@ export type TacticsPuzzle = {
   moves: string[];
   rating: number;
   themes: string[];
-  sourceGame: string;
 };
 
 export const tacticsPuzzles: TacticsPuzzle[] = puzzleData;

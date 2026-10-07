@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Chess, type Square } from "chess.js";
 import type { RealtimeChannel } from "@supabase/supabase-js";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { ChessPieceIcon } from "@/components/chess-piece";
 import { describeMaterialAdvantage, getMaterialAdvantage } from "@/lib/chess/material";
@@ -40,6 +40,7 @@ export default function OnlineGamePage() {
   const [game, setGame] = useState(() => new Chess());
   const gameRef = useRef(game);
   const [moves, setMoves] = useState<SavedMove[]>([]);
+  const [viewPly, setViewPly] = useState<number | null>(null);
   const movesRef = useRef<SavedMove[]>([]);
   const [clocks, setClocks] = useState({ whiteMs: 0, blackMs: 0 });
   const clocksRef = useRef<ClockState>({ whiteMs: 0, blackMs: 0, lastTick: 0 });
@@ -54,6 +55,10 @@ export default function OnlineGamePage() {
   const [promotion, setPromotion] = useState<{ from: Square; to: Square } | null>(null);
   const [drawOffered, setDrawOffered] = useState(false);
   const [incomingDrawOffer, setIncomingDrawOffer] = useState(false);
+  const displayedGame = useMemo(
+    () => viewPly === null ? game : gameFromMoves(moves.slice(0, viewPly)),
+    [game, moves, viewPly],
+  );
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -80,6 +85,7 @@ export default function OnlineGamePage() {
     setGame(gameRef.current);
     movesRef.current = [];
     setMoves([]);
+    setViewPly(null);
     finishedRef.current = null;
     setFinished(null);
     startedRef.current = false;
@@ -349,8 +355,14 @@ function finishGame(end: MatchEnd, broadcast = false) {
     }
   }
 
+  function viewPosition(ply: number | null) {
+    setViewPly(ply === null || ply >= moves.length ? null : Math.max(0, ply));
+    setSelectedSquare(null);
+    setPossibleMoves([]);
+  }
+
   function handleSquareClick(square: Square) {
-    if (!config || finished || !started || !opponentOnline || (game.turn() === "w") !== config.white) return;
+    if (viewPly !== null || !config || finished || !started || !opponentOnline || (game.turn() === "w") !== config.white) return;
     const current = gameRef.current;
     if (selectedSquare && possibleMoves.includes(square)) {
       const piece = current.get(selectedSquare);
@@ -387,7 +399,7 @@ function finishGame(end: MatchEnd, broadcast = false) {
     finishGame({ result: config.white ? "0-1" : "1-0", reason: "Aufgabe" }, true);
   }
 
-  const boardRows = game.board();
+  const boardRows = displayedGame.board();
   const shownRows = config && !config.white ? boardRows.slice().reverse().map((row) => row.slice().reverse()) : boardRows;
   const whoseTurn = game.turn() === "w" ? "Weiß" : "Schwarz";
   const material = describeMaterialAdvantage(getMaterialAdvantage(game), config?.white ? "w" : "b");
@@ -429,7 +441,7 @@ function finishGame(end: MatchEnd, broadcast = false) {
                   const selected = selectedSquare === square;
                   const target = possibleMoves.includes(square);
                   return (
-                    <button key={square} type="button" aria-label={square + (piece ? `, ${piece.color === "w" ? "weiße" : "schwarze"} Figur` : "")} onClick={() => handleSquareClick(square)} disabled={!localTurn || !started || !opponentOnline || Boolean(finished)}
+                    <button key={square} type="button" aria-label={square + (piece ? `, ${piece.color === "w" ? "weiße" : "schwarze"} Figur` : "")} onClick={() => handleSquareClick(square)} disabled={viewPly !== null || !localTurn || !started || !opponentOnline || Boolean(finished)}
                       className={"relative flex h-full w-full items-center justify-center p-0 " + (light ? "chessboard-light" : "chessboard-dark") + (selected ? " ring-4 ring-inset ring-emerald-300" : "") + " disabled:cursor-default"}>
                       {piece && <span className="pointer-events-none absolute inset-0 flex items-center justify-center"><ChessPieceIcon color={piece.color} type={piece.type} /></span>}{colIndex === 0 && <span aria-hidden="true" className={"pointer-events-none absolute left-1 top-0.5 z-10 text-[9px] font-bold sm:text-xs " + (light ? "text-[#537765]" : "text-[#dbe5dc]")}>{square[1]}</span>}{rowIndex === 7 && <span aria-hidden="true" className={"pointer-events-none absolute bottom-0 right-1 z-10 text-[9px] font-bold sm:text-xs " + (light ? "text-[#537765]" : "text-[#dbe5dc]")}>{square[0].toUpperCase()}</span>}
                       {target && <span className="absolute h-3 w-3 rounded-full bg-slate-950/45" />}
@@ -442,6 +454,17 @@ function finishGame(end: MatchEnd, broadcast = false) {
             <div className="mt-3 flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900 px-4 py-3">
               <span className="font-semibold">{config.white ? config.whiteName : config.blackName}</span>
               <span className={"rounded-lg px-3 py-1.5 font-mono text-xl font-bold tabular-nums " + ((config.white ? game.turn() === "w" : game.turn() === "b") && started && !finished ? "bg-emerald-400 text-slate-950" : "bg-slate-800 text-white")}>{config.white ? whiteClock : blackClock}</span>
+            </div>
+            {viewPly !== null && (
+              <p className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-amber-900/60 bg-amber-950/30 px-4 py-3 text-sm text-amber-100">
+                <span>Frühere Stellung nach {viewPly} von {moves.length} Halbzügen. Die Partie läuft unverändert weiter.</span>
+                <button type="button" onClick={() => viewPosition(null)} className="shrink-0 underline underline-offset-4">Live-Stellung</button>
+              </p>
+            )}
+            <div className="mt-3 flex items-center justify-between gap-2 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2">
+              <button type="button" onClick={() => viewPosition(Math.max(0, (viewPly ?? moves.length) - 1))} disabled={(viewPly ?? moves.length) === 0} className="rounded-lg border border-slate-700 px-3 py-2 text-sm disabled:opacity-40">← Zurück</button>
+              <span className="text-xs tabular-nums text-slate-400">{viewPly ?? moves.length} / {moves.length}</span>
+              <button type="button" onClick={() => viewPosition(Math.min(moves.length, (viewPly ?? moves.length) + 1))} disabled={(viewPly ?? moves.length) >= moves.length} className="rounded-lg border border-slate-700 px-3 py-2 text-sm disabled:opacity-40">Weiter →</button>
             </div>
           </section>
 
@@ -457,7 +480,7 @@ function finishGame(end: MatchEnd, broadcast = false) {
 
             <section className="min-h-52 rounded-2xl border border-slate-800 bg-slate-900 p-4">
               <h2 className="mb-3 font-semibold">Zugfolge</h2>
-              {moves.length === 0 ? <p className="text-sm text-slate-500">Die Partie beginnt, sobald beide verbunden sind.</p> : <div className="grid max-h-64 grid-cols-2 gap-2 overflow-y-auto text-sm">{moves.map((move, index) => <div key={index} className="rounded-lg bg-slate-800 px-3 py-2"><span className="mr-2 text-slate-500">{move.color === "w" ? `${Math.floor(index / 2) + 1}.` : ""}</span>{move.san}</div>)}</div>}
+              {moves.length === 0 ? <p className="text-sm text-slate-500">Die Partie beginnt, sobald beide verbunden sind.</p> : <div className="grid max-h-64 grid-cols-2 gap-2 overflow-y-auto text-sm">{moves.map((move, index) => <button type="button" key={index} onClick={() => viewPosition(index + 1)} className={"rounded-lg px-3 py-2 text-left " + ((viewPly ?? moves.length) === index + 1 ? "bg-emerald-500/20 text-emerald-200" : "bg-slate-800")}><span className="mr-2 text-slate-500">{move.color === "w" ? `${Math.floor(index / 2) + 1}.` : ""}</span>{move.san}</button>)}</div>}
             </section>
 
             {!finished ? (

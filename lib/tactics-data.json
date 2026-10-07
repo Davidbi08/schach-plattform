@@ -1,6 +1,6 @@
 [
   {
-    "id": "bC2OM",
+    "id": "tactics-01",
     "rating": 1239,
     "fen": "8/8/2P1kp1p/5p2/1P2pK2/2n3P1/2N4P/8 b - - 0 47",
     "moves": [
@@ -11,11 +11,10 @@
       "oneMove",
       "mateIn1",
       "knightEndgame"
-    ],
-    "sourceGame": "Q2H2Opc7"
+    ]
   },
   {
-    "id": "Tgr62",
+    "id": "tactics-02",
     "rating": 1241,
     "fen": "3r1r1k/2p3pn/2nq1pbp/1p2p3/p3P1PN/P1PP1N1P/BP2Q2K/3R1R2 w - - 0 23",
     "moves": [
@@ -27,11 +26,10 @@
       "hangingPiece",
       "mateIn1",
       "kingsideAttack"
-    ],
-    "sourceGame": "2eDHLCs6"
+    ]
   },
   {
-    "id": "k67Vq",
+    "id": "tactics-03",
     "rating": 1246,
     "fen": "2q2r1k/p3n1b1/1r5p/1p2pNpP/3pB1Q1/5P2/PpP2P2/1K1RR3 w - - 2 32",
     "moves": [
@@ -44,11 +42,10 @@
       "hangingPiece",
       "short",
       "middlegame"
-    ],
-    "sourceGame": "35jdFGan"
+    ]
   },
   {
-    "id": "XXZOi",
+    "id": "tactics-04",
     "rating": 1266,
     "fen": "8/7p/2NkP3/5K2/8/8/7n/8 w - - 3 56",
     "moves": [
@@ -67,11 +64,10 @@
       "crushing",
       "knightEndgame",
       "defensiveMove"
-    ],
-    "sourceGame": "kRpIVbJy"
+    ]
   },
   {
-    "id": "rdXi6",
+    "id": "tactics-05",
     "rating": 1279,
     "fen": "1R6/1p1r1k1p/5p2/pPB3p1/P3PnP1/7P/5K2/8 b - - 2 42",
     "moves": [
@@ -85,11 +81,10 @@
       "short",
       "crushing",
       "fork"
-    ],
-    "sourceGame": "5lH39mrd"
+    ]
   },
   {
-    "id": "9iGOy",
+    "id": "tactics-06",
     "rating": 1286,
     "fen": "r3r1k1/p4ppp/2p5/3p4/2nQ2Pq/5P2/PPP3KP/R3RN2 b - - 7 23",
     "moves": [
@@ -101,11 +96,10 @@
       "short",
       "crushing",
       "middlegame"
-    ],
-    "sourceGame": "bPelI2Eo"
+    ]
   },
   {
-    "id": "pjcHZ",
+    "id": "tactics-07",
     "rating": 1295,
     "fen": "8/8/6R1/7p/5P1P/5k2/r7/5K2 b - - 0 89",
     "moves": [
@@ -116,11 +110,10 @@
       "rookEndgame",
       "oneMove",
       "mateIn1"
-    ],
-    "sourceGame": "Tbo4OQNn"
+    ]
   },
   {
-    "id": "A9pq7",
+    "id": "tactics-08",
     "rating": 1307,
     "fen": "6rk/p1p4p/8/8/8/2P1qQ2/PP6/R4R1K b - - 5 30",
     "moves": [
@@ -132,11 +125,10 @@
       "short",
       "endgame",
       "mateIn2"
-    ],
-    "sourceGame": "xitHlpl0"
+    ]
   },
   {
-    "id": "WzVal",
+    "id": "tactics-09",
     "rating": 1329,
     "fen": "8/p1rq2p1/R1pk1p2/1p2pP2/1P4PK/2P1QP2/8/8 w - - 6 40",
     "moves": [
@@ -146,11 +138,10 @@
       "oneMove",
       "mateIn1",
       "endgame"
-    ],
-    "sourceGame": "klRPUcYU"
+    ]
   },
   {
-    "id": "qegJJ",
+    "id": "tactics-10",
     "rating": 1333,
     "fen": "5r1k/p5p1/4p3/1Pp3qp/3r4/P6P/1P4P1/1BR2RK1 w - - 0 30",
     "moves": [
@@ -160,11 +151,10 @@
       "oneMove",
       "mateIn1",
       "endgame"
-    ],
-    "sourceGame": "d1JV6IF2"
+    ]
   },
   {
-    "id": "auNGb",
+    "id": "tactics-11",
     "rating": 1343,
     "fen": "8/1r6/p4k2/5N1p/2R2Kp1/8/8/8 w - - 1 59",
     "moves": [
@@ -181,11 +171,10 @@
       "fork",
       "long",
       "discoveredAttack"
-    ],
-    "sourceGame": "JjeHdghU"
+    ]
   },
   {
-    "id": "hBcHE",
+    "id": "tactics-12",
     "rating": 1365,
     "fen": "6R1/5p2/p6p/4Q1pk/7P/1P2P1P1/q4r2/6K1 w - - 0 33",
     "moves": [
@@ -199,11 +188,10 @@
       "sacrifice",
       "endgame",
       "mateIn2"
-    ],
-    "sourceGame": "4JmTjvvv"
+    ]
   },
   {
-    "id": "J43tg",
+    "id": "tactics-13",
     "rating": 1373,
     "fen": "kr6/6Q1/2P4p/B1qp2p1/8/P5bb/8/1R5K w - - 10 39",
     "moves": [
@@ -215,11 +203,10 @@
       "mateIn2",
       "middlegame",
       "short"
-    ],
-    "sourceGame": "JMNP9Kh0"
+    ]
   },
   {
-    "id": "USH00",
+    "id": "tactics-14",
     "rating": 1379,
     "fen": "5r1r/PQ6/2R2nk1/3p4/3Bp1b1/6P1/1P3P2/2R2K1B b - - 0 38",
     "moves": [
@@ -231,11 +218,10 @@
       "mateIn2",
       "middlegame",
       "short"
-    ],
-    "sourceGame": "IS2bqIPX"
+    ]
   },
   {
-    "id": "HF6Uw",
+    "id": "tactics-15",
     "rating": 1409,
     "fen": "k7/1p1rb3/1R6/4Bp2/2P3r1/N4Qpq/P4P2/6K1 w - - 0 38",
     "moves": [
@@ -247,11 +233,10 @@
       "mateIn1",
       "pillsburysMate",
       "pin"
-    ],
-    "sourceGame": "nIK2Pqa4"
+    ]
   },
   {
-    "id": "hxyX6",
+    "id": "tactics-16",
     "rating": 1415,
     "fen": "k6r/pp1N1pp1/2p2bp1/4p3/4P3/Q6P/PPP1qP2/1K1R4 w - - 3 25",
     "moves": [
@@ -265,11 +250,10 @@
       "pin",
       "endgame",
       "mateIn2"
-    ],
-    "sourceGame": "U63I43BW"
+    ]
   },
   {
-    "id": "eKmNz",
+    "id": "tactics-17",
     "rating": 1422,
     "fen": "8/8/p1K5/1p2kr2/1P6/8/3R4/8 w - - 1 51",
     "moves": [
@@ -286,11 +270,10 @@
       "endgame",
       "crushing",
       "rookEndgame"
-    ],
-    "sourceGame": "885Tbhmq"
+    ]
   },
   {
-    "id": "L0O7w",
+    "id": "tactics-18",
     "rating": 1431,
     "fen": "r1bN1k2/pp4p1/5p2/3n4/2P5/7P/P1P2PP1/q1BQ2K1 w - - 0 23",
     "moves": [
@@ -303,11 +286,10 @@
       "short",
       "crushing",
       "discoveredAttack"
-    ],
-    "sourceGame": "RVxoHyPj"
+    ]
   },
   {
-    "id": "dWzZ1",
+    "id": "tactics-19",
     "rating": 1439,
     "fen": "r2qkb1r/pp2pppp/2n5/4Pb2/5n2/3B1N2/PP4PP/RNBQK2R w KQkq - 0 10",
     "moves": [
@@ -320,11 +302,10 @@
       "short",
       "hangingPiece",
       "opening"
-    ],
-    "sourceGame": "RO8cliIH"
+    ]
   },
   {
-    "id": "VIX3P",
+    "id": "tactics-20",
     "rating": 1444,
     "fen": "r3k1r1/pp2pp1p/1q1p1n2/3P4/3QpP2/2P1B3/P5PP/R3K2R w KQq - 2 18",
     "moves": [
@@ -337,11 +318,10 @@
       "short",
       "crushing",
       "discoveredAttack"
-    ],
-    "sourceGame": "jpjD1drl"
+    ]
   },
   {
-    "id": "uZ4Sy",
+    "id": "tactics-21",
     "rating": 1469,
     "fen": "8/4Q3/3P1ppk/2p4p/8/4nqPK/5P1P/8 w - - 1 38",
     "moves": [
@@ -353,11 +333,10 @@
       "crushing",
       "short",
       "endgame"
-    ],
-    "sourceGame": "n5uyhduI"
+    ]
   },
   {
-    "id": "lNsbl",
+    "id": "tactics-22",
     "rating": 1473,
     "fen": "7r/b1p5/1pkpQ3/4p3/P3N1P1/3P4/6Pr/1R3RK1 b - - 2 30",
     "moves": [
@@ -376,11 +355,10 @@
       "discoveredAttack",
       "mateIn4",
       "pin"
-    ],
-    "sourceGame": "11fJFXOR"
+    ]
   },
   {
-    "id": "NJT1S",
+    "id": "tactics-23",
     "rating": 1478,
     "fen": "r1b1k2r/p1pp1ppp/1p6/3PP3/2K5/4P3/Pq4PP/RN1Q1BNR b kq - 1 13",
     "moves": [
@@ -390,11 +368,10 @@
       "mateIn1",
       "oneMove",
       "middlegame"
-    ],
-    "sourceGame": "cIGbRWjQ"
+    ]
   },
   {
-    "id": "eoZxC",
+    "id": "tactics-24",
     "rating": 1481,
     "fen": "6k1/8/1p4PK/p2p1r2/8/8/8/2R5 w - - 3 39",
     "moves": [
@@ -411,11 +388,10 @@
       "rookEndgame",
       "long",
       "defensiveMove"
-    ],
-    "sourceGame": "3OU78pSO"
+    ]
   },
   {
-    "id": "8g7D7",
+    "id": "tactics-25",
     "rating": 1501,
     "fen": "2kr2n1/ppp3p1/2nb1p2/8/4Q2P/2P1B2b/PP2PPBq/RN1R1K2 b - - 3 19",
     "moves": [
@@ -426,11 +402,10 @@
       "oneMove",
       "mateIn1",
       "pin"
-    ],
-    "sourceGame": "zqCV4YWZ"
+    ]
   },
   {
-    "id": "qyDGc",
+    "id": "tactics-26",
     "rating": 1530,
     "fen": "1r4k1/6pp/p2Np3/4P3/1P6/P2b1P2/2rp2PP/3R1BK1 w - - 1 26",
     "moves": [
@@ -443,11 +418,10 @@
       "crushing",
       "short",
       "hangingPiece"
-    ],
-    "sourceGame": "I8YV3Spg"
+    ]
   },
   {
-    "id": "BRHqK",
+    "id": "tactics-27",
     "rating": 1550,
     "fen": "3r1rk1/1p3pp1/p3b3/2p2N2/6Q1/2q5/P5PP/R4R1K w - - 0 29",
     "moves": [
@@ -460,11 +434,10 @@
       "middlegame",
       "short",
       "anastasiaMate"
-    ],
-    "sourceGame": "J0vhJdbd"
+    ]
   },
   {
-    "id": "XGqRu",
+    "id": "tactics-28",
     "rating": 1568,
     "fen": "6k1/1Rp2pp1/p2p3p/P2Pn3/2P5/2P1rBP1/6PP/6K1 b - - 0 30",
     "moves": [
@@ -477,11 +450,10 @@
       "cornerMate",
       "endgame",
       "mateIn2"
-    ],
-    "sourceGame": "JiyuR6nC"
+    ]
   },
   {
-    "id": "rVZx4",
+    "id": "tactics-29",
     "rating": 1575,
     "fen": "8/2b4p/1p2Pk2/3K1N1P/8/8/8/8 w - - 3 46",
     "moves": [
@@ -497,11 +469,10 @@
       "crushing",
       "long",
       "defensiveMove"
-    ],
-    "sourceGame": "uxwr6Ww3"
+    ]
   },
   {
-    "id": "zKSg9",
+    "id": "tactics-30",
     "rating": 1593,
     "fen": "5n2/8/1kP2KP1/pP6/8/6P1/8/8 b - - 0 63",
     "moves": [
@@ -516,11 +487,10 @@
       "crushing",
       "knightEndgame",
       "defensiveMove"
-    ],
-    "sourceGame": "WMfzDQRq"
+    ]
   },
   {
-    "id": "CJxuY",
+    "id": "tactics-31",
     "rating": 1613,
     "fen": "4r2r/p3pR1p/4k1p1/1Q1pq3/2B1P3/8/PPP3K1/8 w - - 0 39",
     "moves": [
@@ -532,11 +502,10 @@
       "short",
       "endgame",
       "mateIn2"
-    ],
-    "sourceGame": "yOgZQZEq"
+    ]
   },
   {
-    "id": "SniMZ",
+    "id": "tactics-32",
     "rating": 1616,
     "fen": "k3r3/pp4p1/2pQR2p/6p1/3P2Pn/P6R/1PP2q2/1K6 b - - 0 35",
     "moves": [
@@ -551,11 +520,10 @@
       "advantage",
       "fork",
       "long"
-    ],
-    "sourceGame": "feDvNYGu"
+    ]
   },
   {
-    "id": "DDzWF",
+    "id": "tactics-33",
     "rating": 1661,
     "fen": "4r3/p1p5/1q2Npk1/3Ppnp1/4Q1P1/P7/7K/3RR3 b - - 0 46",
     "moves": [
@@ -567,11 +535,10 @@
       "mateIn2",
       "middlegame",
       "short"
-    ],
-    "sourceGame": "g2vuCXsD"
+    ]
   },
   {
-    "id": "XeIfX",
+    "id": "tactics-34",
     "rating": 1682,
     "fen": "6R1/5p2/5k2/7P/5p2/4pr2/7K/8 w - - 0 49",
     "moves": [
@@ -588,11 +555,10 @@
       "rookEndgame",
       "long",
       "defensiveMove"
-    ],
-    "sourceGame": "TZA4FFN4"
+    ]
   },
   {
-    "id": "3kgLw",
+    "id": "tactics-35",
     "rating": 1858,
     "fen": "7k/R7/1p1BN2p/2pB1P2/1nPb4/7P/3n3K/6r1 b - - 6 54",
     "moves": [
@@ -602,11 +568,10 @@
       "middlegame",
       "mateIn1",
       "oneMove"
-    ],
-    "sourceGame": "3v7SQtpf"
+    ]
   },
   {
-    "id": "4Kz3u",
+    "id": "tactics-36",
     "rating": 1921,
     "fen": "Q7/2K2p1p/4kp2/8/8/8/8/6q1 w - - 0 54",
     "moves": [
@@ -617,7 +582,6 @@
       "mateIn1",
       "endgame",
       "queenEndgame"
-    ],
-    "sourceGame": "u9AHEw1r"
+    ]
   }
 ]
