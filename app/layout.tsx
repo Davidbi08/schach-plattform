@@ -11,7 +11,10 @@ const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"]
 export const metadata: Metadata = {
   title: "Schach spielen und analysieren",
   description: "Spiele Schach, trainiere und werde Teil der Schach-Community.",
-  icons: { icon: "/logo.svg", apple: "/logo.svg" },
+  icons: {
+    icon: "/favicon.ico",
+    apple: [{ url: "/chess-logo-180.png", sizes: "180x180", type: "image/png" }],
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
