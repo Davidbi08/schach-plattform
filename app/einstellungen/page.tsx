@@ -29,8 +29,8 @@ export default function SettingsPage() {
         <p className="mt-2 text-sm text-slate-400">Verwalte dein Konto und dein öffentliches Spielerprofil.</p>
 
         <section className="mt-8 rounded-2xl border border-slate-800 bg-slate-900/60 p-5 sm:p-6">
-          <h2 className="text-lg font-semibold">Profilbild und Biografie</h2>
-          <p className="mb-5 mt-1 text-sm text-slate-400">Diese Angaben können andere Spieler auf deinem Profil sehen.</p>
+          <h2 className="text-lg font-semibold">Dein Spielerprofil</h2>
+          <p className="mb-5 mt-1 text-sm text-slate-400">Ändere deinen öffentlichen Benutzernamen, dein Profilbild und deine Biografie.</p>
           <ProfileEditor />
           <Link href="/profile" className="mt-5 inline-flex text-sm font-medium text-emerald-300 underline underline-offset-4">Mein öffentliches Profil ansehen</Link>
         </section>

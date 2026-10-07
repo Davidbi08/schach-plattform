@@ -9,6 +9,13 @@ type Person = { id: string; username: string; bio?: string; avatar_url?: string 
 type FriendRequest = Person & { request_id: string; status: string; direction: "incoming" | "outgoing"; created_at: string };
 type ChatMessage = { id: string; sender_id: string; username: string; avatar_url: string | null; body: string; created_at: string };
 
+function needsSocialMigrations(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+  const code = "code" in error && typeof error.code === "string" ? error.code : "";
+  const message = "message" in error && typeof error.message === "string" ? error.message : "";
+  return /PGRST202|PGRST204|42501/i.test(`${code} ${message}`);
+}
+
 function Avatar({ person, size = "h-10 w-10" }: { person: Pick<Person, "username" | "avatar_url">; size?: string }) {
   return person.avatar_url
     ? <img src={person.avatar_url} alt="" className={`${size} rounded-full bg-slate-800 object-cover`} />
@@ -29,6 +36,7 @@ export function SocialHub({ initialTab = "friends" }: { initialTab?: SocialTab }
   const [requests, setRequests] = useState<FriendRequest[]>([]);
   const [search, setSearch] = useState("");
   const [results, setResults] = useState<Person[]>([]);
+  const [searching, setSearching] = useState(false);
   const [activeFriend, setActiveFriend] = useState<Person | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [messageScope, setMessageScope] = useState("");
@@ -48,7 +56,8 @@ export function SocialHub({ initialTab = "friends" }: { initialTab?: SocialTab }
       supabase.rpc("get_my_friends"),
       supabase.rpc("get_my_friend_requests"),
     ]);
-    if (friendError || requestError) throw new Error("Freunde und Anfragen konnten nicht geladen werden.");
+    if (friendError) throw friendError;
+    if (requestError) throw requestError;
     setFriends((friendData ?? []) as Person[]);
     setRequests((requestData ?? []) as FriendRequest[]);
   }, [getSupabase]);
@@ -57,14 +66,14 @@ export function SocialHub({ initialTab = "friends" }: { initialTab?: SocialTab }
     const supabase = getSupabase();
     if (tab === "global") {
       const { data, error: queryError } = await supabase.rpc("get_global_chat_messages");
-      if (queryError) throw new Error("Der globale Chat konnte nicht geladen werden.");
+      if (queryError) throw queryError;
       setMessages((data ?? []) as ChatMessage[]);
       setMessageScope("global");
       return;
     }
     if (activeFriend) {
       const { data, error: queryError } = await supabase.rpc("get_direct_messages", { p_other_user_id: activeFriend.id });
-      if (queryError) throw new Error("Der private Chat konnte nicht geladen werden.");
+      if (queryError) throw queryError;
       setMessages((data ?? []) as ChatMessage[]);
       setMessageScope(activeFriend.id);
     }
@@ -78,8 +87,10 @@ export function SocialHub({ initialTab = "friends" }: { initialTab?: SocialTab }
         if (!active) return;
         setUserId(user?.id ?? null);
         if (user) await loadFriends();
-      } catch {
-        if (active) setError("Freundesdaten konnten nicht geladen werden. Bitte lade die Seite neu.");
+      } catch (loadError) {
+        if (active) setError(needsSocialMigrations(loadError)
+          ? "Die Community-Funktionen sind in der Datenbank noch nicht eingerichtet. Bitte wende die Supabase-Migrationen an."
+          : "Freundesdaten konnten nicht geladen werden. Bitte lade die Seite neu.");
       } finally {
         if (active) setLoading(false);
       }
@@ -98,7 +109,9 @@ export function SocialHub({ initialTab = "friends" }: { initialTab?: SocialTab }
         await loadMessages();
         if (active) setError("");
       } catch (loadError) {
-        if (active) setError(loadError instanceof Error ? loadError.message : "Nachrichten konnten nicht geladen werden.");
+        if (active) setError(needsSocialMigrations(loadError)
+          ? "Die Chatfunktion ist in der Datenbank noch nicht eingerichtet. Bitte wende die Supabase-Migrationen an."
+          : "Nachrichten konnten nicht geladen werden. Bitte versuche es erneut.");
       }
     };
     void refresh();
@@ -109,28 +122,39 @@ export function SocialHub({ initialTab = "friends" }: { initialTab?: SocialTab }
   async function searchProfiles(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
+    setResults([]);
     const query = search.trim();
     if (query.length < 3) {
       setError("Gib mindestens drei Zeichen eines Spielernamens ein.");
       return;
     }
-    const { data, error: searchError } = await getSupabase().rpc("search_public_profiles", { p_query: query });
-    if (searchError) {
-      setError("Spieler konnten nicht gesucht werden.");
-      return;
+    setSearching(true);
+    try {
+      const { data, error: searchError } = await getSupabase().rpc("search_public_profiles", { p_query: query });
+      if (searchError) throw searchError;
+      setResults((data ?? []) as Person[]);
+    } catch (searchError) {
+      setError(needsSocialMigrations(searchError)
+        ? "Die Spielersuche ist in der Datenbank noch nicht eingerichtet. Bitte wende die Supabase-Migrationen an."
+        : "Spieler konnten nicht gesucht werden. Bitte prüfe den Benutzernamen und versuche es erneut.");
+    } finally {
+      setSearching(false);
     }
-    setResults((data ?? []) as Person[]);
   }
 
   async function requestFriend(username: string) {
-    const { error: requestError } = await getSupabase().rpc("request_friend", { p_username: username });
-    if (requestError) {
-      setError(requestError.message.includes("bereits eine Anfrage") ? "Für diesen Spieler besteht bereits eine Anfrage oder Freundschaft." : "Freundschaftsanfrage konnte nicht gesendet werden.");
-      return;
+    try {
+      const { error: requestError } = await getSupabase().rpc("request_friend", { p_username: username });
+      if (requestError) {
+        setError(requestError.message.includes("bereits eine Anfrage") ? "Für diesen Spieler besteht bereits eine Anfrage oder Freundschaft." : "Freundschaftsanfrage konnte nicht gesendet werden.");
+        return;
+      }
+      setError(`Freundschaftsanfrage an ${username} gesendet.`);
+      setResults((current) => current.filter((person) => person.username !== username));
+      await loadFriends();
+    } catch {
+      setError("Freundschaftsanfrage konnte nicht gesendet werden. Bitte prüfe die Supabase-Migrationen und versuche es erneut.");
     }
-    setError(`Freundschaftsanfrage an ${username} gesendet.`);
-    setResults((current) => current.filter((person) => person.username !== username));
-    await loadFriends();
   }
 
   async function respondToRequest(request: FriendRequest, accept: boolean) {
@@ -158,22 +182,27 @@ export function SocialHub({ initialTab = "friends" }: { initialTab?: SocialTab }
     if (!body || sending || !userId) return;
     setSending(true);
     setError("");
-    const supabase = getSupabase();
-    const { error: sendError } = tab === "global"
-      ? await supabase.rpc("send_global_chat_message", { p_body: body })
-      : activeFriend
-        ? await supabase.rpc("send_direct_message", { p_recipient_id: activeFriend.id, p_body: body })
-        : { error: { message: "Wähle zuerst einen Freund aus." } };
-    setSending(false);
-    if (sendError) {
-      setError(messageText(sendError, "Nachricht konnte nicht gesendet werden."));
-      return;
-    }
-    setDraft("");
     try {
+      const supabase = getSupabase();
+      const { error: sendError } = tab === "global"
+        ? await supabase.rpc("send_global_chat_message", { p_body: body })
+        : activeFriend
+          ? await supabase.rpc("send_direct_message", { p_recipient_id: activeFriend.id, p_body: body })
+          : { error: { message: "Wähle zuerst einen Freund aus." } };
+      if (sendError) {
+        setError(messageText(sendError, needsSocialMigrations(sendError)
+          ? "Die Chatfunktion ist in der Datenbank noch nicht eingerichtet. Bitte wende die Supabase-Migrationen an."
+          : "Nachricht konnte nicht gesendet werden."));
+        return;
+      }
+      setDraft("");
       await loadMessages();
-    } catch {
-      setError("Nachricht gesendet, aber der Verlauf konnte nicht aktualisiert werden.");
+    } catch (sendError) {
+      setError(needsSocialMigrations(sendError)
+        ? "Die Chatfunktion ist in der Datenbank noch nicht eingerichtet. Bitte wende die Supabase-Migrationen an."
+        : "Nachricht konnte nicht gesendet oder der Chat nicht aktualisiert werden. Bitte versuche es erneut.");
+    } finally {
+      setSending(false);
     }
   }
 
@@ -201,10 +230,10 @@ export function SocialHub({ initialTab = "friends" }: { initialTab?: SocialTab }
               <label htmlFor="player-search" className="sr-only">Nach Spielernamen suchen</label>
               <div className="mt-3 flex gap-2">
                 <input id="player-search" value={search} onChange={(event) => setSearch(event.target.value)} maxLength={20} placeholder="Benutzername" className="min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none focus:border-emerald-400" />
-                <button type="submit" className="rounded-lg border border-slate-700 px-3 py-2 text-sm hover:bg-slate-800">Suchen</button>
+                <button type="submit" disabled={searching} className="rounded-lg border border-slate-700 px-3 py-2 text-sm hover:bg-slate-800 disabled:opacity-50">{searching ? "Sucht …" : "Suchen"}</button>
               </div>
               {results.length > 0 && <ul className="mt-3 space-y-2">{results.map((person) => <li key={person.id} className="flex items-center gap-2 rounded-lg bg-slate-800/70 p-2"><Link href={`/profile/${encodeURIComponent(person.username)}`} className="flex min-w-0 flex-1 items-center gap-2"><Avatar person={person} size="h-8 w-8" /><span className="truncate text-sm">{person.username}</span></Link><button type="button" onClick={() => void requestFriend(person.username)} className="rounded-md bg-emerald-400 px-2 py-1 text-xs font-semibold text-slate-950">Hinzufügen</button></li>)}</ul>}
-              {search.trim().length >= 3 && results.length === 0 && <p className="mt-3 text-sm text-slate-500">Keine Spieler gefunden.</p>}
+              {!searching && !error && search.trim().length >= 3 && results.length === 0 && <p className="mt-3 text-sm text-slate-500">Keine Spieler gefunden.</p>}
             </form>
 
             <section className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
