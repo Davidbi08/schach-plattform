@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { ProfileEditor } from "@/components/profile-editor";
 import { createClient } from "@/lib/supabase/client";
 
 type PublicProfile = { id: string; username: string; bio: string; avatar_url: string | null };
@@ -22,6 +23,10 @@ const modeLabels: Record<PlayerRating["game_mode"], string> = {
   classical: "Klassisch",
 };
 
+function isMissingSocialRpc(error: { code?: string; message?: string }) {
+  return error.code === "PGRST202" || /could not find the function/i.test(error.message ?? "");
+}
+
 export function PlayerProfileView({ requestedUsername }: { requestedUsername?: string }) {
   const [username, setUsername] = useState(requestedUsername ?? "");
   const [profile, setProfile] = useState<PublicProfile | null>(null);
@@ -31,6 +36,11 @@ export function PlayerProfileView({ requestedUsername }: { requestedUsername?: s
   const [message, setMessage] = useState("");
   const [friendMessage, setFriendMessage] = useState("");
   const [addingFriend, setAddingFriend] = useState(false);
+  const handleOwnProfileSaved = useCallback((savedProfile: PublicProfile) => {
+    setUsername(savedProfile.username);
+    setProfile(savedProfile);
+    setMessage("");
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -64,7 +74,9 @@ export function PlayerProfileView({ requestedUsername }: { requestedUsername?: s
         const { data: profileData, error: profileError } = await supabase.rpc("get_public_profile", { p_username: name });
         const publicProfile = Array.isArray(profileData) ? profileData[0] as PublicProfile | undefined : null;
         if (profileError || !publicProfile) {
-          if (active) setMessage("Dieses Spielerprofil wurde nicht gefunden.");
+          if (active) setMessage(profileError && isMissingSocialRpc(profileError)
+            ? "Die Profildatenbank ist noch nicht eingerichtet. Bitte wende die Supabase-Migrationen an."
+            : "Dieses Spielerprofil wurde nicht gefunden.");
           return;
         }
         const { data: ratingData } = await supabase.rpc("get_public_player_ratings", { p_username: name });
@@ -120,10 +132,18 @@ export function PlayerProfileView({ requestedUsername }: { requestedUsername?: s
             </div>
           </div>
           {profile && viewerId === profile.id
-            ? <Link href="/einstellungen" className="mt-4 inline-flex text-sm font-semibold text-emerald-300 underline underline-offset-4">Profil bearbeiten</Link>
+            ? <a href="#profile-settings" className="mt-4 inline-flex text-sm font-semibold text-emerald-300 underline underline-offset-4">Profil bearbeiten</a>
             : profile && viewerId && <div className="mt-4 flex flex-wrap items-center gap-3"><button type="button" onClick={() => void addFriend()} disabled={addingFriend} className="rounded-lg bg-emerald-400 px-4 py-2 text-sm font-semibold text-slate-950 disabled:opacity-50">{addingFriend ? "Wird gesendet …" : "Als Freund hinzufügen"}</button><Link href="/freunde" className="text-sm text-slate-300 underline underline-offset-4">Freunde & Nachrichten</Link>{friendMessage && <p role="status" className="text-sm text-slate-300">{friendMessage}</p>}</div>}
           <p className="mt-3 text-slate-300">Online-Elo nach Bedenkzeit. Jede Zeitkontrolle hat eine eigene Wertung.</p>
         </header>
+
+        {!requestedUsername && viewerId && (
+          <section id="profile-settings" className="mt-6 scroll-mt-6 rounded-2xl border border-slate-800 bg-slate-900/60 p-5 sm:p-6" aria-labelledby="profile-settings-heading">
+            <h2 id="profile-settings-heading" className="text-2xl font-bold">Profileinstellungen</h2>
+            <p className="mb-5 mt-1 text-sm text-slate-400">Verwalte deinen Benutzernamen, dein Profilbild und deine Biografie.</p>
+            <ProfileEditor onProfileSaved={handleOwnProfileSaved} />
+          </section>
+        )}
 
         <section className="mt-6" aria-labelledby="ratings-heading">
           <div className="mb-3 flex items-end justify-between gap-3">

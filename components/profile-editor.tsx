@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from "react"
 import { createClient } from "@/lib/supabase/client";
 
 type SocialProfile = { username: string; bio: string; avatar_url: string | null };
+type ProfileEditorProps = { onProfileSaved?: (profile: SocialProfile & { id: string }) => void };
 
 function backendErrorText(error: unknown) {
   if (!error || typeof error !== "object") return "";
@@ -12,7 +13,7 @@ function backendErrorText(error: unknown) {
   return `${code} ${message}`;
 }
 
-export function ProfileEditor() {
+export function ProfileEditor({ onProfileSaved }: ProfileEditorProps) {
   const supabaseRef = useRef<ReturnType<typeof createClient> | null>(null);
   const getSupabase = useCallback(() => {
     if (!supabaseRef.current) supabaseRef.current = createClient();
@@ -43,7 +44,11 @@ export function ProfileEditor() {
         if (error) throw error;
         const ownProfile = Array.isArray(data) ? data[0] as SocialProfile | undefined : undefined;
         if (!ownProfile) throw new Error("Eigenes Profil nicht gefunden");
-        if (active) setProfile({ username: ownProfile.username, bio: ownProfile.bio ?? "", avatar_url: ownProfile.avatar_url ?? null });
+        if (active) {
+          const loadedProfile = { id: user.id, username: ownProfile.username, bio: ownProfile.bio ?? "", avatar_url: ownProfile.avatar_url ?? null };
+          setProfile(loadedProfile);
+          onProfileSaved?.(loadedProfile);
+        }
       } catch {
         if (active) setMessage("Dein Profil konnte nicht geladen werden. Prüfe, ob die aktuellen Supabase-Migrationen angewendet wurden.");
       } finally {
@@ -52,7 +57,7 @@ export function ProfileEditor() {
     }
     void load();
     return () => { active = false; };
-  }, [getSupabase]);
+  }, [getSupabase, onProfileSaved]);
 
   useEffect(() => {
     return () => {
@@ -93,7 +98,9 @@ export function ProfileEditor() {
         p_avatar_url: avatarUrl,
       });
       if (saveError) throw saveError;
-      setProfile((current) => ({ ...current, avatar_url: avatarUrl }));
+      const savedProfile = { ...profile, id: userId, username: profile.username.trim(), bio: profile.bio.trim(), avatar_url: avatarUrl };
+      setProfile(savedProfile);
+      onProfileSaved?.(savedProfile);
       setFile(null);
       setPreviewUrl(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
