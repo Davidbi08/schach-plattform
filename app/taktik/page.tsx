@@ -2,6 +2,7 @@
 
 import { useState, useSyncExternalStore } from "react";
 import { Chess, type Color, type Square } from "chess.js";
+import { ChessAIChat } from "@/components/chess-ai-chat";
 import { MiniChessboard } from "@/components/mini-chessboard";
 import { chooseTacticsPuzzle, getTacticsDifficulty, getTacticsPuzzleForRating, getTacticsRatingChange, getTacticsTheme, tacticsPuzzles } from "@/lib/tactics";
 import { getTacticsProgress, INITIAL_TACTICS_PROGRESS, subscribeToTacticsProgress, updateTacticsProgress } from "@/lib/tactics-progress";
@@ -172,6 +173,16 @@ export default function TacticsPage() {
           </section>
 
           <aside className="space-y-4">
+            <ChessAIChat
+              scope="tactics"
+              context={[
+                `Aufgabenstellung (FEN): ${puzzle.fen}`,
+                `Aufgabenbewertung: ${puzzle.rating}`,
+                `Taktikthema: ${getTacticsTheme(puzzle.themes)}`,
+                `Lösung (UCI-Züge): ${puzzle.moves.join(" ")}`,
+                `Bereits gespielte Lösungs-Halbzüge: ${solutionIndex}`,
+              ].join("\n")}
+            />
             <section className="rounded-2xl border border-slate-800 bg-slate-900/50 p-5">
               <h2 className="font-semibold">Dein Fortschritt</h2>
               <div className="mt-4 grid grid-cols-2 gap-3">

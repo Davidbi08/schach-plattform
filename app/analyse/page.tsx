@@ -1,6 +1,7 @@
 "use client";
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Chess, type Square } from "chess.js";
+import { ChessAIChat } from "@/components/chess-ai-chat";
 
 const START_FEN = new Chess().fen();
 const PIECES: Record<string, string> = {
@@ -286,7 +287,14 @@ export default function AnalysePage() {
             <label className="mt-4 inline-flex cursor-pointer rounded-xl border border-slate-700 px-4 py-2.5 text-sm hover:bg-slate-800">Foto auswählen<input type="file" accept="image/*" onChange={(event) => { const file = event.target.files?.[0] ?? null; setSheetFile(file); setSheetName(file?.name ?? ""); setOcrStatus(""); }} className="sr-only" /></label>
             {sheetName && <p className="mt-2 text-sm text-slate-300">Ausgewählt: {sheetName}</p>}<button type="button" onClick={readSheet} disabled={!sheetFile || ocrBusy} className="mt-3 w-full rounded-xl bg-emerald-400 px-4 py-3 font-semibold text-slate-950 disabled:opacity-50">{ocrBusy ? "Lese Partie …" : "Züge aus Foto lesen"}</button>{ocrStatus && <p role="status" className="mt-3 text-sm text-slate-300">{ocrStatus}</p>}
           </section>
-          <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5"><h2 className="text-lg font-bold">Fragen an den KI-Coach</h2><p className="mt-2 text-sm leading-6 text-slate-400">Der Gesprächs-Chat folgt als nächster Schritt. Diese erste Version analysiert Stellungen direkt mit Stockfish; sie sendet deine Partie an keinen KI-Dienst.</p></section>
+          <ChessAIChat
+            scope="analysis"
+            context={[
+              `Aktuelle Stellung (FEN): ${game.fen()}`,
+              `Züge bis zu dieser Stellung: ${moves.slice(0, moveIndex).join(" ") || "Noch keine"}`,
+              evaluation ? `Stockfish-Bewertung: ${evaluation.score}; Tiefe: ${evaluation.depth}; beste Zugfolge: ${evaluation.line || "keine"}` : "Für diese Stellung liegt noch keine Stockfish-Bewertung vor.",
+            ].join("\n")}
+          />
         </aside>
       </div>
     </div>
