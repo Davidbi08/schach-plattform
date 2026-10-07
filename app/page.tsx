@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ChessAIChat } from "@/components/chess-ai-chat";
 import { MiniChessboard } from "@/components/mini-chessboard";
 import { tacticsPreviewFen } from "@/lib/tactics";
 import { createClient } from "@/lib/supabase/client";
@@ -63,10 +62,6 @@ export default function Home() {
             <span aria-hidden="true">↓</span>App installieren
           </Link>
         </header>
-
-        <div className="mb-10">
-          <ChessAIChat scope="general" />
-        </div>
 
         <section aria-labelledby="spielen-heading">
           <div className="mb-4 flex items-end justify-between gap-4">
