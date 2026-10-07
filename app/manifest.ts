@@ -13,16 +13,28 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: "#050505",
     icons: [
       {
-        src: "/api/pwa-icon?size=192&v=7",
+        src: "/chess-logo-192.png?v=8",
         sizes: "192x192",
         type: "image/png",
         purpose: "any",
       },
       {
-        src: "/api/pwa-icon?size=512&v=7",
+        src: "/chess-logo-512.png?v=8",
         sizes: "512x512",
         type: "image/png",
         purpose: "any",
+      },
+      {
+        src: "/chess-logo-192-maskable.png?v=8",
+        sizes: "192x192",
+        type: "image/png",
+        purpose: "maskable",
+      },
+      {
+        src: "/chess-logo-512-maskable.png?v=8",
+        sizes: "512x512",
+        type: "image/png",
+        purpose: "maskable",
       },
     ],
   };
