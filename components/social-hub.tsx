@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useDirectMessageNotifications } from "@/components/direct-message-notifications";
 
 type SocialTab = "friends" | "global";
 type Person = { id: string; username: string; bio?: string; avatar_url?: string | null };
@@ -30,6 +31,7 @@ function messageText(error: { message: string } | null, fallback: string) {
 }
 
 export function SocialHub({ initialTab = "friends" }: { initialTab?: SocialTab }) {
+  const { unreadByFriend, refreshUnread } = useDirectMessageNotifications();
   const [tab, setTab] = useState<SocialTab>(initialTab);
   const [userId, setUserId] = useState<string | null>(null);
   const [friends, setFriends] = useState<Person[]>([]);
@@ -76,8 +78,14 @@ export function SocialHub({ initialTab = "friends" }: { initialTab?: SocialTab }
       if (queryError) throw queryError;
       setMessages((data ?? []) as ChatMessage[]);
       setMessageScope(activeFriend.id);
+      const { error: readError } = await supabase.rpc("mark_direct_messages_read", { p_other_user_id: activeFriend.id });
+      if (readError) {
+        console.error("Private Nachrichten konnten nicht als gelesen markiert werden:", readError);
+      } else {
+        await refreshUnread();
+      }
     }
-  }, [activeFriend, getSupabase, tab]);
+  }, [activeFriend, getSupabase, refreshUnread, tab]);
 
   useEffect(() => {
     let active = true;
@@ -248,7 +256,8 @@ export function SocialHub({ initialTab = "friends" }: { initialTab?: SocialTab }
                   <Avatar person={friend} size="h-8 w-8" />
                   <span className="truncate text-sm">{friend.username}</span>
                 </Link>
-                <button type="button" onClick={() => { setActiveFriend(friend); setTab("friends"); }} className={`rounded-md px-2 py-1 text-xs font-medium ${activeFriend?.id === friend.id ? "bg-emerald-400 text-slate-950" : "border border-slate-700 text-slate-300 hover:bg-slate-800"}`}>Chat</button>
+              {unreadByFriend[friend.id] && <span aria-label={`${unreadByFriend[friend.id].unread_count} ungelesene Nachrichten`} className="rounded-full bg-emerald-400 px-2 py-0.5 text-[10px] font-bold text-slate-950">{unreadByFriend[friend.id].unread_count}</span>}
+              <button type="button" onClick={() => { setActiveFriend(friend); setTab("friends"); }} className={`rounded-md px-2 py-1 text-xs font-medium ${activeFriend?.id === friend.id ? "bg-emerald-400 text-slate-950" : "border border-slate-700 text-slate-300 hover:bg-slate-800"}`}>Chat</button>
                 <button type="button" onClick={() => void removeFriend(friend)} aria-label={`${friend.username} als Freund entfernen`} className="px-2 text-xs text-slate-500 hover:text-rose-300">Entfernen</button>
               </li>)}</ul>}
             </section>
