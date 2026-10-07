@@ -139,21 +139,16 @@ export default function TacticsPage() {
               <div>
                 <p className="text-sm font-semibold text-white">Finde die beste Fortsetzung.</p>
                 <p className="mt-1 text-xs text-slate-400">
-                  Du spielst {playerColor === "w" ? "Weiß" : "Schwarz"} · {puzzle.rating} Aufgaben-Elo · {getTacticsDifficulty(puzzle.rating)}
+                  Am Zug: {chess.turn() === "w" ? "Weiß" : "Schwarz"} · {puzzle.rating} Aufgaben-Elo · {getTacticsDifficulty(puzzle.rating)}
                 </p>
               </div>
-              <a
-                href={`https://lichess.org/${puzzle.sourceGame}`}
-                target="_blank"
-                rel="noreferrer"
-                className="shrink-0 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs text-slate-300 hover:border-slate-500 hover:text-white"
-              >
-                {getTacticsTheme(puzzle.themes)} · Partie ansehen ↗
-              </a>
+              <span className="shrink-0 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs text-slate-300">
+                {getTacticsTheme(puzzle.themes)}
+              </span>
             </div>
             <MiniChessboard
               fen={positionFen}
-              label={`Taktikaufgabe, ${playerColor === "w" ? "Weiß" : "Schwarz"} am Zug`}
+              label={`Taktikaufgabe, ${chess.turn() === "w" ? "Weiß" : "Schwarz"} am Zug`}
               onSquareClick={selectSquare}
               selected={selected}
               targets={targets}
@@ -196,19 +191,11 @@ export default function TacticsPage() {
             </section>
 
             <section className="rounded-2xl border border-slate-800 p-5">
-              <h2 className="font-semibold">Echte Stellungen, legale Züge</h2>
+              <h2 className="font-semibold">Legale Züge und klare Hinweise</h2>
               <p className="mt-2 text-sm leading-6 text-slate-400">
-                Jede Aufgabe stammt aus einer echten Lichess-Partie. Du kannst nur mit der am Zug befindlichen Farbe ziehen;
+                Die Aufgaben verwenden realistische Stellungen. Du kannst nur mit der am Zug befindlichen Farbe ziehen;
                 die besten Antworten der Gegenseite werden automatisch ausgespielt.
               </p>
-              <a
-                href="https://database.lichess.org/#puzzles"
-                target="_blank"
-                rel="noreferrer"
-                className="mt-3 inline-block text-xs text-slate-500 underline underline-offset-4 hover:text-slate-300"
-              >
-                Puzzledatenbank: Creative Commons CC0 ↗
-              </a>
             </section>
           </aside>
         </div>

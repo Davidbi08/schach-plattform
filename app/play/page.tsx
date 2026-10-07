@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Chess } from 'chess.js';import { ChessPieceIcon } from '@/components/chess-piece';
 import { getMaterialAdvantage } from '@/lib/chess/material';
 import { createClient } from '@/lib/supabase/client';
@@ -20,6 +20,7 @@ export default function Home() {
   const [clockMinutes, setClockMinutes] = useState(10);
   const [incrementSeconds, setIncrementSeconds] = useState(0);
   const [moves, setMoves] = useState<string[]>([]);
+  const [viewedPly, setViewedPly] = useState<number | null>(null);
   const [botElo, setBotElo] = useState<number | null>(null);
   const [botColor, setBotColor] = useState<'w' | 'b'>('b');
   const [botThinking, setBotThinking] = useState(false);
@@ -34,7 +35,21 @@ export default function Home() {
   const pendingGenerationRef = useRef<number | null>(null);
   const botDelayRef = useRef<number | null>(null);
   const animationTimerRef = useRef<number | null>(null);  useEffect(() => { let active = true; const loadPlayerName = async () => { try { const supabase = createClient(); const { data: { user } } = await supabase.auth.getUser(); if (!user) return; const { data } = await supabase.from('profiles').select('username').eq('id', user.id).maybeSingle(); if (active && typeof data?.username === 'string' && data.username.trim()) setPlayerName(data.username.trim().slice(0, 20)); } catch { /* optional profile name */ } }; void loadPlayerName(); return () => { active = false; }; }, []); const isFlipped = botElo !== null && botColor === 'w';  const whitePlayerName = botElo !== null ? (botColor === 'w' ? 'Bot' : playerName) : 'Weiß'; const blackPlayerName = botElo !== null ? (botColor === 'b' ? 'Bot' : playerName) : 'Schwarz'; const boardRows = game.board();
-  const board = isFlipped ? boardRows.slice().reverse().map((row) => row.slice().reverse()) : boardRows;
+  const historyPositions = useMemo(() => {
+    const replay = new Chess();
+    const positions = [replay.fen()];
+    for (const san of moves) {
+      replay.move(san);
+      positions.push(replay.fen());
+    }
+    return positions;
+  }, [moves]);
+  const displayedRows = viewedPly === null
+    ? boardRows
+    : new Chess(historyPositions[viewedPly] ?? game.fen()).board();
+  const displayedBoard = isFlipped
+    ? displayedRows.slice().reverse().map((row) => row.slice().reverse())
+    : displayedRows;
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -163,8 +178,14 @@ export default function Home() {
     }, 260);
   }
 
+  function viewPosition(ply: number | null) {
+    setViewedPly(ply === null || ply >= moves.length ? null : Math.max(0, ply));
+    setSelectedSquare(null);
+    setPossibleMoves([]);
+  }
+
   function choosePromotion(piece: 'q' | 'r' | 'b' | 'n') { if (!promotionPending) return; try { const move = game.move({ from: promotionPending.from, to: promotionPending.to, promotion: piece }); animateMove(move.from, move.to); setMoves((oldMoves) => [...oldMoves, move.san]); if (clockMinutes > 0 && incrementSeconds > 0) { if (move.color === 'w') setWhiteTime((time) => time + incrementSeconds); else setBlackTime((time) => time + incrementSeconds); } setGame(new Chess(game.fen())); setSelectedSquare(null); setPossibleMoves([]); setPromotionPending(null); } catch { setPromotionPending(null); } } function handleSquareClick(square: string) {
-    if (game.isGameOver() || (clockMinutes > 0 && (whiteTime === 0 || blackTime === 0)) || botThinking) return;
+    if (viewedPly !== null || game.isGameOver() || (clockMinutes > 0 && (whiteTime === 0 || blackTime === 0)) || botThinking) return;
     if (botElo !== null && game.turn() === botColor) return;
     const piece = game.get(square as never);
     if (selectedSquare) {
@@ -212,6 +233,7 @@ export default function Home() {
     setWhiteTime(clockMinutes * 60);
     setBlackTime(clockMinutes * 60);
     setMoves([]);
+    setViewedPly(null);
     setBotThinking(false);
     setEngineError('');
   }
@@ -262,10 +284,16 @@ export default function Home() {
           <div><div className="text-sm text-slate-400">Figurenpunkte</div><div className="text-sm font-medium">{materialLeader}</div></div>
           <div className={'text-2xl font-bold tabular-nums ' + (materialScore > 0 ? 'text-emerald-300' : materialScore < 0 ? 'text-rose-300' : 'text-slate-200')}>{materialScore > 0 ? '+' : materialScore < 0 ? '−' : ''}{Math.abs(materialScore)}</div>
         </div>
+        {viewedPly !== null && (
+          <p className="mb-4 flex w-full max-w-2xl items-center justify-between gap-3 rounded-xl border border-amber-900/60 bg-amber-950/30 px-4 py-3 text-sm text-amber-100">
+            <span>Frühere Stellung nach {viewedPly} von {moves.length} Halbzügen. Die Partie läuft unverändert weiter.</span>
+            <button type="button" onClick={() => viewPosition(null)} className="shrink-0 underline underline-offset-4">Zur Live-Stellung</button>
+          </p>
+        )}
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
           <div className="chessboard-frame overflow-hidden shadow-2xl">
             <div className="relative grid grid-cols-8">
-              {board.map((row, rowIndex) => row.map((piece, colIndex) => {
+              {displayedBoard.map((row, rowIndex) => row.map((piece, colIndex) => {
                 const square = isFlipped
                   ? String.fromCharCode(104 - colIndex) + (rowIndex + 1)
                   : String.fromCharCode(97 + colIndex) + (8 - rowIndex);
@@ -274,10 +302,10 @@ export default function Home() {
                 const rankDelta = animatedMove ? Number(animatedMove.to[1]) - Number(animatedMove.from[1]) : 0;
                 const moveFromX = (isFlipped ? fileDelta : -fileDelta) * 100;
                 const moveFromY = (isFlipped ? -rankDelta : rankDelta) * 100;
-                const isAnimatedMove = animatedMove?.to === square;
+                const isAnimatedMove = viewedPly === null && animatedMove?.to === square;
                 return (
                   <button key={square} type="button" aria-label={square + (piece ? ', ' + (piece.color === 'w' ? 'weiße' : 'schwarze') + ' Figur' : '')}
-                    disabled={botThinking || (botElo !== null && game.turn() === botColor)}
+                    disabled={viewedPly !== null || botThinking || (botElo !== null && game.turn() === botColor)}
                     onClick={() => handleSquareClick(square)}
                     className={'relative flex aspect-square w-11 items-center justify-center text-3xl disabled:cursor-wait sm:w-16 sm:text-5xl md:w-20 md:text-6xl ' + (isLight ? 'chessboard-light' : 'chessboard-dark') + (selectedSquare === square ? ' ring-4 ring-blue-500 ring-inset' : '')}>
                     {piece && <span style={isAnimatedMove ? ({ '--move-from-x': moveFromX + '%', '--move-from-y': moveFromY + '%' } as import('react').CSSProperties) : undefined} className={'absolute inset-0 flex items-center justify-center' + (isAnimatedMove ? ' animate-chess-piece-move' : '')}><ChessPieceIcon color={piece.color} type={piece.type} /></span>}{colIndex === 0 && <span aria-hidden="true" className={'pointer-events-none absolute left-1 top-0.5 z-10 text-[9px] font-bold sm:text-xs ' + (isLight ? 'text-[#537765]' : 'text-[#dbe5dc]')}>{square[1]}</span>}{rowIndex === 7 && <span aria-hidden="true" className={'pointer-events-none absolute bottom-0 right-1 z-10 text-[9px] font-bold sm:text-xs ' + (isLight ? 'text-[#537765]' : 'text-[#dbe5dc]')}>{square[0].toUpperCase()}</span>}{possibleMoves.includes(square) && <span className="absolute h-3 w-3 rounded-full bg-slate-800/60" />}
@@ -291,9 +319,15 @@ export default function Home() {
             <h2 className="mb-3 text-lg font-bold">Zugliste</h2>
             {moves.length === 0 ? <p className="text-sm text-slate-500">Noch keine Züge.</p> : (
               <div className="grid grid-cols-2 gap-2 text-sm">
-                {moves.map((move, index) => <div key={index} className="rounded bg-slate-800 px-2 py-1">{index % 2 === 0 ? (Math.floor(index / 2) + 1) + '. ' + move : move}</div>)}
+                {moves.map((move, index) => <button type="button" key={index} onClick={() => viewPosition(index + 1)} className={'rounded px-2 py-1 text-left ' + ((viewedPly ?? moves.length) === index + 1 ? 'bg-emerald-500/20 text-emerald-200' : 'bg-slate-800 text-slate-300')}>{index % 2 === 0 ? (Math.floor(index / 2) + 1) + '. ' + move : move}</button>)}
               </div>
             )}
+            <div className="mt-3 flex items-center justify-between gap-2">
+              <button type="button" onClick={() => viewPosition(Math.max(0, (viewedPly ?? moves.length) - 1))} disabled={(viewedPly ?? moves.length) === 0} className="rounded-lg border border-slate-700 px-3 py-2 text-sm disabled:opacity-40">← Zurück</button>
+              <span className="text-xs tabular-nums text-slate-400">{viewedPly ?? moves.length} / {moves.length}</span>
+              <button type="button" onClick={() => viewPosition(Math.min(moves.length, (viewedPly ?? moves.length) + 1))} disabled={(viewedPly ?? moves.length) >= moves.length} className="rounded-lg border border-slate-700 px-3 py-2 text-sm disabled:opacity-40">Weiter →</button>
+            </div>
+            <button type="button" onClick={() => viewPosition(null)} disabled={viewedPly === null} className="mt-2 w-full rounded-lg border border-slate-700 px-3 py-2 text-sm disabled:opacity-40">Live-Stellung anzeigen</button>
           </div>
         </div>
         <button type="button" onClick={newGame} className="mt-6 rounded-xl bg-white px-6 py-3 font-semibold text-slate-950">🔄 Neues Spiel</button>

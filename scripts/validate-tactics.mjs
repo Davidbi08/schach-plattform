@@ -16,9 +16,10 @@ assert.ok(puzzles.some((puzzle) => puzzle.moves.length >= 5), "Include multi-mov
 
 for (const puzzle of puzzles) {
   assert.ok(!ids.has(puzzle.id), `Duplicate puzzle id: ${puzzle.id}`);
+  assert.match(puzzle.id, /^tactics-\d{2}$/, `Puzzle id should not expose a source identifier: ${puzzle.id}`);
   ids.add(puzzle.id);
   assert.ok(Number.isInteger(puzzle.rating) && puzzle.rating >= 400 && puzzle.rating <= 2600, `Invalid rating: ${puzzle.id}`);
-  assert.ok(puzzle.sourceGame, `Missing source game: ${puzzle.id}`);
+  assert.ok(!("sourceGame" in puzzle), `Puzzle data should not expose source game IDs: ${puzzle.id}`);
   assert.ok(puzzle.moves.length > 0 && puzzle.moves.length % 2 === 1, `Puzzle should end on the player's move: ${puzzle.id}`);
 
   const position = new Chess(puzzle.fen);
