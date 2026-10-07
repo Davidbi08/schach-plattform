@@ -42,7 +42,7 @@ revoke all on function public.censor_chat_profanity(text) from public, anon, aut
 create or replace function public.get_global_chat_messages()
 returns table (id uuid, sender_id uuid, username text, avatar_url text, body text, created_at timestamptz)
 language plpgsql
-volatile
+stable
 security definer
 set search_path = public, pg_temp
 as $$
@@ -50,9 +50,6 @@ declare
   v_week_start timestamptz := date_trunc('week', now());
 begin
   if auth.uid() is null then raise exception 'Anmeldung erforderlich'; end if;
-
-  delete from public.global_chat_messages
-  where created_at < v_week_start;
 
   return query
   select m.id, m.sender_id, p.username, p.avatar_url,

@@ -4,7 +4,7 @@ create index if not exists player_ratings_leaderboard_idx
 
 create or replace function public.get_global_leaderboard(p_game_mode text)
 returns table (
-  position bigint,
+  "position" bigint,
   user_id uuid,
   username text,
   avatar_url text,
@@ -43,7 +43,7 @@ $$;
 
 create or replace function public.get_friends_leaderboard(p_game_mode text)
 returns table (
-  position bigint,
+  "position" bigint,
   user_id uuid,
   username text,
   avatar_url text,

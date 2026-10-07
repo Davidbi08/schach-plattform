@@ -6,6 +6,7 @@ import { ProfileEditor } from "@/components/profile-editor";
 import { createClient } from "@/lib/supabase/client";
 
 type PublicProfile = { id: string; username: string; bio: string; avatar_url: string | null };
+type RelationshipStatus = "checking" | "none" | "friend" | "incoming" | "outgoing" | "unavailable";
 type PlayerRating = {
   username: string;
   game_mode: "bullet" | "blitz" | "rapid" | "classical";
@@ -27,6 +28,26 @@ function isMissingSocialRpc(error: { code?: string; message?: string }) {
   return error.code === "PGRST202" || /could not find the function/i.test(error.message ?? "");
 }
 
+async function getRelationshipStatus(
+  supabase: ReturnType<typeof createClient>,
+  profileId: string,
+): Promise<Exclude<RelationshipStatus, "checking" | "unavailable">> {
+  const [{ data: friends, error: friendsError }, { data: requests, error: requestsError }] = await Promise.all([
+    supabase.rpc("get_my_friends"),
+    supabase.rpc("get_my_friend_requests"),
+  ]);
+  if (friendsError) throw friendsError;
+  if (requestsError) throw requestsError;
+  const friendRows = (friends ?? []) as { id: string }[];
+  const requestRows = (requests ?? []) as { user_id: string; direction: string }[];
+  if (friendRows.some((friend) => friend.id === profileId)) return "friend";
+
+  const request = requestRows.find((item) => item.user_id === profileId);
+  if (request?.direction === "incoming") return "incoming";
+  if (request?.direction === "outgoing") return "outgoing";
+  return "none";
+}
+
 export function PlayerProfileView({ requestedUsername }: { requestedUsername?: string }) {
   const [username, setUsername] = useState(requestedUsername ?? "");
   const [profile, setProfile] = useState<PublicProfile | null>(null);
@@ -36,6 +57,7 @@ export function PlayerProfileView({ requestedUsername }: { requestedUsername?: s
   const [message, setMessage] = useState("");
   const [friendMessage, setFriendMessage] = useState("");
   const [addingFriend, setAddingFriend] = useState(false);
+  const [relationshipStatus, setRelationshipStatus] = useState<RelationshipStatus>("checking");
   const handleOwnProfileSaved = useCallback((savedProfile: PublicProfile) => {
     setUsername(savedProfile.username);
     setProfile(savedProfile);
@@ -48,6 +70,8 @@ export function PlayerProfileView({ requestedUsername }: { requestedUsername?: s
     async function load() {
       setLoading(true);
       setMessage("");
+      setRelationshipStatus("checking");
+      setFriendMessage("");
       try {
         const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
@@ -80,10 +104,19 @@ export function PlayerProfileView({ requestedUsername }: { requestedUsername?: s
           return;
         }
         const { data: ratingData } = await supabase.rpc("get_public_player_ratings", { p_username: name });
+        let currentRelationship: RelationshipStatus = "none";
+        if (user && user.id !== publicProfile.id) {
+          try {
+            currentRelationship = await getRelationshipStatus(supabase, publicProfile.id);
+          } catch {
+            currentRelationship = "unavailable";
+          }
+        }
         if (active) {
           setUsername(name);
           setProfile(publicProfile);
           setRatings(Array.isArray(ratingData) ? ratingData as PlayerRating[] : []);
+          setRelationshipStatus(currentRelationship);
         }
       } catch {
         if (active) setMessage("Das Spielerprofil konnte gerade nicht geladen werden.");
@@ -97,16 +130,24 @@ export function PlayerProfileView({ requestedUsername }: { requestedUsername?: s
   }, [requestedUsername]);
 
   async function addFriend() {
-    if (!profile || addingFriend) return;
+    if (!profile || addingFriend || relationshipStatus !== "none") return;
     setAddingFriend(true);
     setFriendMessage("");
     try {
       const { error } = await createClient().rpc("request_friend", { p_username: profile.username });
       if (error) {
-        setFriendMessage(error.message.includes("bereits eine Anfrage")
-          ? "Für diesen Spieler besteht bereits eine Anfrage oder Freundschaft."
-          : "Die Anfrage konnte nicht gesendet werden.");
+        if (error.message.includes("bereits eine Anfrage")) {
+          try {
+            setRelationshipStatus(await getRelationshipStatus(createClient(), profile.id));
+          } catch {
+            setRelationshipStatus("unavailable");
+          }
+          setFriendMessage("Der Freundschaftsstatus wurde aktualisiert.");
+        } else {
+          setFriendMessage("Die Anfrage konnte nicht gesendet werden.");
+        }
       } else {
+        setRelationshipStatus("outgoing");
         setFriendMessage("Freundschaftsanfrage gesendet.");
       }
     } catch {
@@ -133,7 +174,16 @@ export function PlayerProfileView({ requestedUsername }: { requestedUsername?: s
           </div>
           {profile && viewerId === profile.id
             ? <a href="#profile-settings" className="mt-4 inline-flex text-sm font-semibold text-emerald-300 underline underline-offset-4">Profil bearbeiten</a>
-            : profile && viewerId && <div className="mt-4 flex flex-wrap items-center gap-3"><button type="button" onClick={() => void addFriend()} disabled={addingFriend} className="rounded-lg bg-emerald-400 px-4 py-2 text-sm font-semibold text-slate-950 disabled:opacity-50">{addingFriend ? "Wird gesendet …" : "Als Freund hinzufügen"}</button><Link href="/freunde" className="text-sm text-slate-300 underline underline-offset-4">Freunde & Nachrichten</Link>{friendMessage && <p role="status" className="text-sm text-slate-300">{friendMessage}</p>}</div>}
+            : profile && viewerId && <div className="mt-4 flex flex-wrap items-center gap-3">
+              {relationshipStatus === "checking" && <span role="status" className="text-sm text-slate-400">Freundschaftsstatus wird geprüft …</span>}
+              {relationshipStatus === "none" && <button type="button" onClick={() => void addFriend()} disabled={addingFriend} className="rounded-lg bg-emerald-400 px-4 py-2 text-sm font-semibold text-slate-950 disabled:opacity-50">{addingFriend ? "Wird gesendet …" : "Als Freund hinzufügen"}</button>}
+              {relationshipStatus === "friend" && <span className="rounded-lg border border-emerald-400/40 px-4 py-2 text-sm font-semibold text-emerald-300">Bereits befreundet</span>}
+              {relationshipStatus === "outgoing" && <span className="rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-300">Anfrage ausstehend</span>}
+              {relationshipStatus === "incoming" && <span className="rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-300">Freundschaftsanfrage erhalten</span>}
+              {relationshipStatus === "unavailable" && <span role="status" className="text-sm text-slate-400">Freundschaftsstatus konnte nicht geladen werden.</span>}
+              <Link href="/freunde" className="text-sm text-slate-300 underline underline-offset-4">Freunde & Nachrichten</Link>
+              {friendMessage && <p role="status" className="text-sm text-slate-300">{friendMessage}</p>}
+            </div>}
           <p className="mt-3 text-slate-300">Online-Elo nach Bedenkzeit. Jede Zeitkontrolle hat eine eigene Wertung.</p>
         </header>
 
