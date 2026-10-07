@@ -15,6 +15,13 @@ type Leader = {
   rated_games: number;
 };
 
+function isMissingLeaderboardRpc(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+  const code = "code" in error && typeof error.code === "string" ? error.code : "";
+  const message = "message" in error && typeof error.message === "string" ? error.message : "";
+  return code === "PGRST202" || /could not find the function/i.test(message);
+}
+
 const gameModes: { id: GameMode; label: string }[] = [
   { id: "bullet", label: "Bullet" },
   { id: "blitz", label: "Blitz" },
@@ -62,8 +69,10 @@ export function Leaderboards() {
           : await supabase.rpc("get_friends_leaderboard", { p_game_mode: gameMode });
         if (queryError) throw queryError;
         if (active) setLeaders((data ?? []) as Leader[]);
-      } catch {
-        if (active) setError("Die Rangliste konnte nicht geladen werden. Bitte versuche es erneut.");
+      } catch (loadError) {
+        if (active) setError(isMissingLeaderboardRpc(loadError)
+          ? "Die Ranglistenfunktionen sind in der Datenbank noch nicht eingerichtet. Bitte wende die Migration 20261007000002_leaderboards.sql an."
+          : "Die Rangliste konnte nicht geladen werden. Bitte versuche es erneut.");
       } finally {
         if (active) setLoading(false);
       }

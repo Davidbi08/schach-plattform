@@ -243,7 +243,14 @@ export function SocialHub({ initialTab = "friends" }: { initialTab?: SocialTab }
 
             <section className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
               <h2 className="font-semibold">Deine Freunde</h2>
-              {friends.length === 0 ? <p className="mt-3 text-sm text-slate-500">Noch keine Freunde – suche nach einem Spielernamen.</p> : <ul className="mt-3 space-y-2">{friends.map((friend) => <li key={friend.id} className="flex items-center gap-2"><button type="button" onClick={() => { setActiveFriend(friend); setTab("friends"); }} className={`flex min-w-0 flex-1 items-center gap-2 rounded-lg p-2 text-left ${activeFriend?.id === friend.id ? "bg-slate-800" : "hover:bg-slate-800/60"}`}><Avatar person={friend} size="h-8 w-8" /><span className="truncate text-sm">{friend.username}</span></button><button type="button" onClick={() => void removeFriend(friend)} aria-label={`${friend.username} als Freund entfernen`} className="px-2 text-xs text-slate-500 hover:text-rose-300">Entfernen</button></li>)}</ul>}
+              {friends.length === 0 ? <p className="mt-3 text-sm text-slate-500">Noch keine Freunde – suche nach einem Spielernamen.</p> : <ul className="mt-3 space-y-2">{friends.map((friend) => <li key={friend.id} className="flex items-center gap-2 rounded-lg p-2 hover:bg-slate-800/60">
+                <Link href={`/profile/${encodeURIComponent(friend.username)}`} className="flex min-w-0 flex-1 items-center gap-2" aria-label={`Profil von ${friend.username} öffnen`}>
+                  <Avatar person={friend} size="h-8 w-8" />
+                  <span className="truncate text-sm">{friend.username}</span>
+                </Link>
+                <button type="button" onClick={() => { setActiveFriend(friend); setTab("friends"); }} className={`rounded-md px-2 py-1 text-xs font-medium ${activeFriend?.id === friend.id ? "bg-emerald-400 text-slate-950" : "border border-slate-700 text-slate-300 hover:bg-slate-800"}`}>Chat</button>
+                <button type="button" onClick={() => void removeFriend(friend)} aria-label={`${friend.username} als Freund entfernen`} className="px-2 text-xs text-slate-500 hover:text-rose-300">Entfernen</button>
+              </li>)}</ul>}
             </section>
           </section>
 
@@ -290,7 +297,7 @@ function ChatPanel({
       <div className="flex items-center justify-between gap-3 border-b border-slate-800 pb-3">
         <h2 className="font-semibold">{title}</h2>
         {showBack && <button type="button" onClick={onBack} className="text-xs text-slate-400 underline underline-offset-4">Alle Freunde</button>}
-        <span className="text-xs text-slate-500">Aktualisiert automatisch</span>
+        <span className="text-xs text-slate-500">{title === "Globaler Schach-Chat" ? "Wöchentlicher Verlauf · erkannte Beleidigungen werden zensiert" : "Erkannte Beleidigungen werden zensiert"}</span>
       </div>
       <div className="flex-1 space-y-3 overflow-y-auto py-4" aria-live="polite">
         {messages.length === 0 ? <p className="py-8 text-center text-sm text-slate-500">{emptyText}</p> : messages.map((message) => (
