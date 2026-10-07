@@ -163,6 +163,14 @@ function roomUrl(game: TournamentGame, tournament: Tournament, playerId: string)
   return `/online/partie?${params.toString()}`;
 }
 
+function errorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "object" && error !== null && "message" in error && typeof error.message === "string") {
+    return error.message;
+  }
+  return fallback;
+}
+
 export function Tournaments() {
   const [userId, setUserId] = useState<string | null>(null);
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
@@ -200,8 +208,8 @@ export function Tournaments() {
       getClient().rpc("list_chess_tournament_players", { p_tournament_id: tournament.tournament_id }),
       getClient().rpc("list_chess_tournament_games", { p_tournament_id: tournament.tournament_id }),
     ]);
-    if (playerError) throw playerError;
-    if (gameError) throw gameError;
+    if (playerError) throw new Error(`Teilnehmerliste: ${errorMessage(playerError, "unbekannter Fehler")}`);
+    if (gameError) throw new Error(`Paarungen: ${errorMessage(gameError, "unbekannter Fehler")}`);
     setPlayers((playerData ?? []) as Player[]);
     setGames((gameData ?? []) as TournamentGame[]);
   }, [getClient]);
@@ -333,7 +341,7 @@ export function Tournaments() {
         <section className="space-y-3">
           <div className="flex items-center justify-between"><h2 className="text-lg font-semibold">Turnierübersicht</h2><button type="button" onClick={() => void refresh()} disabled={busy} className="text-xs text-slate-400 underline disabled:opacity-50">Aktualisieren</button></div>
           {tournaments.map((tournament) => <article key={tournament.tournament_id} className={`rounded-xl border p-4 ${selected?.tournament_id === tournament.tournament_id ? "border-emerald-400/60 bg-slate-900" : "border-slate-800 bg-slate-900/60"}`}>
-            <button type="button" onClick={() => { setSelected(tournament); setError(""); if (tournament.is_joined) void loadDetails(tournament).catch((loadError) => setError(loadError instanceof Error ? loadError.message : "Turnierdetails konnten nicht geladen werden.")); }} className="block w-full text-left">
+            <button type="button" onClick={() => { setSelected(tournament); setError(""); if (tournament.is_joined) void loadDetails(tournament).catch((loadError) => { console.error("Turnierdetails konnten nicht geladen werden:", loadError); setError(`Turnierdetails konnten nicht geladen werden: ${errorMessage(loadError, "unbekannter Fehler")}`); }); }} className="block w-full text-left">
               <span className="flex items-start justify-between gap-2"><strong>{tournament.name}</strong><span className="shrink-0 text-xs text-emerald-300">{statusLabels[tournament.status]}</span></span>
               <span className="mt-1 block text-xs text-slate-400">{tournament.player_count}/{tournament.max_players} Spieler · {Math.floor(tournament.initial_seconds / 60)}+{tournament.increment_seconds} · von {tournament.creator_username}</span>
             </button>
