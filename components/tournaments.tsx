@@ -153,6 +153,7 @@ function roomUrl(game: TournamentGame, tournament: Tournament, playerId: string)
     room: [player, opponent].sort().join("_"),
     player,
     opponent,
+    tournamentGameId: game.game_id,
     white: String(white),
     initial: String(tournament.initial_seconds),
     increment: String(tournament.increment_seconds),
