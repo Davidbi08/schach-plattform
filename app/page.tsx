@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { MiniChessboard } from "@/components/mini-chessboard";
 import { tacticsPreviewFen } from "@/lib/tactics";
+import { getTacticsProgress, INITIAL_TACTICS_PROGRESS, subscribeToTacticsProgress } from "@/lib/tactics-progress";
 import { createClient } from "@/lib/supabase/client";
 
 const activities = [
@@ -12,9 +13,40 @@ const activities = [
   { title: "Freie Partie", detail: "Stelle deine Partie ein", href: "/play", tag: "LOKAL", mark: "＋" },
 ];
 
+const dashboardSections = [
+  {
+    id: "training-analysis",
+    title: "Training & Analyse",
+    description: "Verbessere deine Taktik, lerne Eröffnungen und untersuche Stellungen.",
+    items: [
+      { title: "Taktikaufgaben", detail: "Trainiere mit Aufgaben passend zu deiner Taktik-Elo.", href: "/taktik", mark: "♞" },
+      { title: "Eröffnungen", detail: "Spiele ausgewählte Varianten Zug für Zug nach.", href: "/repertoire", mark: "⌂" },
+      { title: "Analysebrett", detail: "Untersuche Stellungen und spiele Züge nach.", href: "/analyse", mark: "⌕" },
+    ],
+  },
+  {
+    id: "community",
+    title: "Community",
+    description: "Finde Mitspieler, tritt Turnieren bei und vergleiche Wertungen.",
+    items: [
+      { title: "Turniere", detail: "Erstelle ein Turnier oder spiele in einer Runde mit.", href: "/tournaments", mark: "♜" },
+      { title: "Freunde & Nachrichten", detail: "Finde Spieler und verwalte deine Kontakte.", href: "/freunde", mark: "♙" },
+      { title: "Ranglisten", detail: "Vergleiche Online-Wertungen mit anderen Spielern.", href: "/ranglisten", mark: "↗" },
+    ],
+  },
+];
+
 export default function Home() {
   const [username, setUsername] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const progress = useSyncExternalStore(
+    subscribeToTacticsProgress,
+    getTacticsProgress,
+    () => INITIAL_TACTICS_PROGRESS,
+  );
+  const accuracy = progress.attempted > 0
+    ? `${Math.round((progress.solved / progress.attempted) * 100)}%`
+    : "—";
 
   useEffect(() => {
     async function loadProfile() {
@@ -53,15 +85,43 @@ export default function Home() {
         <section aria-labelledby="welcome-heading" className="mb-10 grid gap-6 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/60 p-5 shadow-xl shadow-black/10 sm:p-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
           <div className="py-2">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-400">Taktiktraining</p>
-            <h1 id="welcome-heading" className="mt-3 max-w-xl text-3xl font-semibold tracking-tight text-white sm:text-4xl">Der nächste Zug liegt bei dir.</h1>
+            <h1 id="welcome-heading" className="mt-3 max-w-xl text-3xl font-semibold tracking-tight text-white sm:text-4xl">{username ? <>Willkommen zurück, <span className="text-emerald-300">{username}</span>.</> : "Der nächste Zug liegt bei dir."}</h1>
             <p className="mt-3 max-w-md text-sm leading-6 text-slate-400">Löse eine Aufgabe in deiner Spielstärke und schärfe deinen Blick für die entscheidenden Züge.</p>
-            <Link href="/taktik" className="mt-6 inline-flex items-center gap-2 rounded-lg bg-emerald-400 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400">
-              Aufgabe starten <span aria-hidden="true">→</span>
-            </Link>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link href="/taktik" className="inline-flex items-center gap-2 rounded-lg bg-emerald-400 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400">
+                Aufgabe starten <span aria-hidden="true">→</span>
+              </Link>
+              <Link href="/online" className="inline-flex items-center gap-2 rounded-lg border border-slate-700 px-4 py-3 text-sm font-semibold text-slate-200 transition hover:border-emerald-400/70 hover:text-emerald-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400">
+                Online spielen
+              </Link>
+            </div>
           </div>
           <Link href="/taktik" aria-label="Taktikaufgabe öffnen" className="mx-auto block w-full max-w-md transition hover:scale-[1.01] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400">
             <MiniChessboard fen={tacticsPreviewFen} label="Vorschau einer Taktikaufgabe" />
           </Link>
+        </section>
+
+        <section aria-labelledby="progress-heading" className="mb-10">
+          <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Training</p>
+              <h2 id="progress-heading" className="mt-1 text-xl font-semibold text-white">Dein Taktik-Fortschritt</h2>
+            </div>
+            <p className="text-xs text-slate-500">Wird in diesem Browser gespeichert</p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            {[
+              { label: "Taktik-Elo", value: progress.rating, detail: "Dein aktueller Trainingsstand" },
+              { label: "Gelöste Aufgaben", value: progress.solved, detail: `von ${progress.attempted} Versuchen` },
+              { label: "Trefferquote", value: accuracy, detail: progress.attempted > 0 ? "bei deinen bisherigen Aufgaben" : "erscheint nach deinem ersten Versuch" },
+            ].map((stat) => (
+              <article key={stat.label} className="rounded-xl border border-slate-800 bg-slate-900/60 p-5">
+                <p className="text-sm text-slate-400">{stat.label}</p>
+                <p className="mt-2 text-3xl font-semibold tabular-nums text-white">{stat.value}</p>
+                <p className="mt-1 text-xs text-slate-500">{stat.detail}</p>
+              </article>
+            ))}
+          </div>
         </section>
 
         <section aria-labelledby="spielen-heading">
@@ -88,16 +148,29 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="mt-10 grid gap-3 sm:grid-cols-2">
-          <Link href="/analyse" className="flex items-center justify-between rounded-xl border border-slate-800 px-5 py-4 transition hover:border-slate-600 hover:bg-slate-900/60">
-            <div><h2 className="font-medium text-slate-200">Partie analysieren</h2><p className="mt-1 text-sm text-slate-500">Stellungen untersuchen und Züge nachspielen.</p></div>
-            <span aria-hidden="true" className="ml-4 text-slate-500">→</span>
-          </Link>
-          <Link href="/profile" className="flex items-center justify-between rounded-xl border border-slate-800 px-5 py-4 transition hover:border-slate-600 hover:bg-slate-900/60">
-            <div><h2 className="font-medium text-slate-200">Dein Profil</h2><p className="mt-1 text-sm text-slate-500">Spielername, Wertungen und Schachreise.</p></div>
-            <span aria-hidden="true" className="ml-4 text-slate-500">→</span>
-          </Link>
-        </section>
+        {dashboardSections.map((section) => (
+          <section key={section.id} aria-labelledby={`section-${section.id}`} className="mt-10">
+            <div className="mb-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-400">Entdecken</p>
+              <h2 id={`section-${section.id}`} className="mt-1 text-xl font-semibold text-white">{section.title}</h2>
+              <p className="mt-1 text-sm text-slate-400">{section.description}</p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {section.items.map((item) => (
+                <Link key={item.href} href={item.href} className="group flex min-h-32 items-start gap-4 rounded-xl border border-slate-800 bg-slate-900/50 p-5 transition hover:border-emerald-500/50 hover:bg-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400">
+                  <span aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-400/10 text-lg text-emerald-300">{item.mark}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center justify-between gap-2 font-semibold text-slate-100">
+                      {item.title}
+                      <span aria-hidden="true" className="text-slate-500 transition group-hover:translate-x-1 group-hover:text-emerald-300">→</span>
+                    </span>
+                    <span className="mt-1 block text-sm leading-5 text-slate-400">{item.detail}</span>
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        ))}
       </div>
     </main>
   );
