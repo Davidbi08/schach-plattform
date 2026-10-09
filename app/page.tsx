@@ -29,6 +29,7 @@ const dashboardSections = [
     title: "Community",
     description: "Finde Mitspieler, tritt Turnieren bei und vergleiche Wertungen.",
     items: [
+      { title: "Verein & Training", detail: "Organisiere Gruppen, gemeinsame Aufgaben und Turniere.", href: "/verein", mark: "♙" },
       { title: "Turniere", detail: "Erstelle ein Turnier oder spiele in einer Runde mit.", href: "/tournaments", mark: "♜" },
       { title: "Freunde & Nachrichten", detail: "Finde Spieler und verwalte deine Kontakte.", href: "/freunde", mark: "♙" },
       { title: "Ranglisten", detail: "Vergleiche Online-Wertungen mit anderen Spielern.", href: "/ranglisten", mark: "↗" },
