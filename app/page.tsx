@@ -37,23 +37,10 @@ export default function Home() {
     <main className="min-h-screen bg-slate-950 text-slate-100">
       <div className="mx-auto max-w-6xl px-5 pb-16 pt-8 sm:px-8 sm:pt-12">
         <header className="mb-8 flex flex-wrap items-center justify-between gap-5 border-b border-slate-800 pb-7">
-          <div className="flex min-w-0 flex-col items-center gap-4 sm:items-start sm:gap-6">
-            <Link href="/" aria-label="Schachplattform Startseite" className="flex items-center gap-3 self-start text-xl font-semibold tracking-tight text-white">
-              <img src="/chess-logo-192.png" alt="" className="h-12 w-12 rounded-xl" />
-              <span>Schach<span className="font-normal text-slate-400">plattform</span></span>
-            </Link>
-            <Link href="/taktik" aria-label="Taktikaufgabe starten" className="block w-full max-w-[min(88vw,38rem)] shrink-0 transition hover:scale-[1.01] sm:w-full">
-              <MiniChessboard fen={tacticsPreviewFen} label="Vorschau einer Taktikaufgabe" />
-            </Link>
-            <div>
-              <p className="text-xs font-medium uppercase tracking-[0.16em] text-emerald-400">Taktiktraining</p>
-              <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white sm:text-4xl">Der nächste Zug liegt bei dir.</h1>
-              <p className="mt-2 text-sm text-slate-400">Löse eine Aufgabe in deiner Spielstärke.</p>
-              <Link href="/taktik" className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-emerald-300 hover:text-emerald-200">
-                Aufgabe starten <span aria-hidden="true">→</span>
-              </Link>
-            </div>
-          </div>
+          <Link href="/" aria-label="Schachplattform Startseite" className="flex items-center gap-3 text-xl font-semibold tracking-tight text-white">
+            <img src="/chess-logo-192.png" alt="" className="h-11 w-11 rounded-xl" />
+            <span>Schach<span className="font-normal text-slate-400">plattform</span></span>
+          </Link>
           <div className="flex items-center gap-3">
             {username && <Link href="/einstellungen" className="rounded-lg px-3 py-2.5 text-sm text-slate-400 transition hover:bg-slate-900 hover:text-white">Einstellungen</Link>}
             {!loading && !username && <Link href="/login" className="rounded-lg bg-emerald-400 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300">Anmelden</Link>}
@@ -62,6 +49,20 @@ export default function Home() {
             <span aria-hidden="true">↓</span>App installieren
           </Link>
         </header>
+
+        <section aria-labelledby="welcome-heading" className="mb-10 grid gap-6 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/60 p-5 shadow-xl shadow-black/10 sm:p-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+          <div className="py-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-400">Taktiktraining</p>
+            <h1 id="welcome-heading" className="mt-3 max-w-xl text-3xl font-semibold tracking-tight text-white sm:text-4xl">Der nächste Zug liegt bei dir.</h1>
+            <p className="mt-3 max-w-md text-sm leading-6 text-slate-400">Löse eine Aufgabe in deiner Spielstärke und schärfe deinen Blick für die entscheidenden Züge.</p>
+            <Link href="/taktik" className="mt-6 inline-flex items-center gap-2 rounded-lg bg-emerald-400 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400">
+              Aufgabe starten <span aria-hidden="true">→</span>
+            </Link>
+          </div>
+          <Link href="/taktik" aria-label="Taktikaufgabe öffnen" className="mx-auto block w-full max-w-md transition hover:scale-[1.01] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400">
+            <MiniChessboard fen={tacticsPreviewFen} label="Vorschau einer Taktikaufgabe" />
+          </Link>
+        </section>
 
         <section aria-labelledby="spielen-heading">
           <div className="mb-4 flex items-end justify-between gap-4">
