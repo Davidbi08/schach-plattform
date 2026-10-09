@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import Link from "next/link";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { Chess, type Color, type Square } from "chess.js";
 import { MiniChessboard } from "@/components/mini-chessboard";
 import { chooseTacticsPuzzle, getTacticsDifficulty, getTacticsPuzzleForRating, getTacticsRatingChange, getTacticsTheme, tacticsPuzzles } from "@/lib/tactics";
 import { getTacticsProgress, INITIAL_TACTICS_PROGRESS, subscribeToTacticsProgress, updateTacticsProgress } from "@/lib/tactics-progress";
+import { createClient } from "@/lib/supabase/client";
 
 type Outcome = "solved" | "missed" | null;
 
@@ -26,11 +28,30 @@ function moveToUci(move: { from: Square; to: Square; promotion?: string }): stri
 export default function TacticsPage() {
   const progress = useSyncExternalStore(subscribeToTacticsProgress, getTacticsProgress, () => INITIAL_TACTICS_PROGRESS);
   const [puzzleId, setPuzzleId] = useState<string | null>(null);
+  const [clubTaskId, setClubTaskId] = useState<string | null>(null);
+  const [clubTaskMessage, setClubTaskMessage] = useState("");
+  const [clubTaskError, setClubTaskError] = useState("");
   const [positionState, setPositionState] = useState<{ puzzleId: string; fen: string } | null>(null);
   const [solutionIndex, setSolutionIndex] = useState(0);
   const [selected, setSelected] = useState<Square | null>(null);
   const [outcome, setOutcome] = useState<Outcome>(null);
   const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const requestedTaskId = params.get("clubTask");
+    const requestedPuzzleId = params.get("puzzle");
+    if (!requestedTaskId && !requestedPuzzleId) return;
+    const assignedPuzzle = requestedPuzzleId
+      ? tacticsPuzzles.find((candidate) => candidate.id === requestedPuzzleId)
+      : null;
+    if (!requestedTaskId || !assignedPuzzle) {
+      setClubTaskError("Die Vereinsaufgabe konnte nicht geladen werden. Öffne sie bitte erneut über deine Trainingsgruppe.");
+      return;
+    }
+    setClubTaskId(requestedTaskId);
+    setPuzzleId(assignedPuzzle.id);
+  }, []);
 
   const puzzle = puzzleId
     ? tacticsPuzzles.find((candidate) => candidate.id === puzzleId) ?? getTacticsPuzzleForRating(progress.rating, progress.recent)
@@ -59,6 +80,26 @@ export default function TacticsPage() {
     setMessage(correct
       ? `Richtig! ${answer} Deine Taktik-Elo ${ratingChange >= 0 ? "+" : ""}${ratingChange}.`
       : `Noch nicht. Gesucht war ${answer} Deine Taktik-Elo ${ratingChange >= 0 ? "+" : ""}${ratingChange}.`);
+    if (clubTaskId) {
+      void (async () => {
+        try {
+          const { error: attemptError } = await createClient().rpc("record_chess_club_training_attempt", {
+            p_task_id: clubTaskId,
+            p_solved: correct,
+          });
+          if (attemptError) throw attemptError;
+          setClubTaskMessage("Dein Ergebnis wurde in der Teilnahmeübersicht gespeichert.");
+        } catch (attemptError) {
+          console.error("Vereinsaufgabe konnte nicht gespeichert werden:", attemptError);
+          const errorCode = typeof attemptError === "object" && attemptError !== null && "code" in attemptError && typeof attemptError.code === "string"
+            ? attemptError.code
+            : "";
+          setClubTaskMessage(/PGRST202|PGRST204|PGRST205|42P01|42883/.test(errorCode)
+            ? "Die Vereinsdatenbank ist noch nicht eingerichtet. Bitte wende die Vereinsmigration in Supabase an."
+            : "Dein Vereinsfortschritt konnte nicht gespeichert werden. Bitte prüfe deine Anmeldung und versuche es erneut.");
+        }
+      })();
+    }
   }
 
   function selectSquare(squareName: string) {
@@ -132,6 +173,8 @@ export default function TacticsPage() {
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-400">Training</p>
             <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">Taktikaufgaben</h1>
             <p className="mt-2 text-sm text-slate-400">Echte Partiestellungen, passend zu deiner Taktik-Elo.</p>
+            {clubTaskId && <p className="mt-2 text-sm text-emerald-200">Vereinsaufgabe · Dein Ergebnis wird mit deiner Trainingsgruppe geteilt.</p>}
+            {clubTaskError && <p className="mt-2 text-sm text-amber-200" role="alert">{clubTaskError}</p>}
           </div>
           <div className="rounded-xl border border-emerald-400/20 bg-emerald-400/5 px-5 py-3">
             <p className="text-xs font-medium uppercase tracking-wider text-slate-400">Deine Taktik-Elo</p>
@@ -166,14 +209,17 @@ export default function TacticsPage() {
             >
               {message || "Wähle eine Figur und danach das Zielfeld."}
             </div>
+            {clubTaskMessage && <p className="mt-2 text-sm text-slate-400" role="status">{clubTaskMessage}</p>}
             {outcome && (
-              <button
-                type="button"
-                onClick={nextPuzzle}
-                className="mt-3 w-full rounded-lg bg-emerald-400 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300"
-              >
-                Nächste Aufgabe →
-              </button>
+              clubTaskId
+                ? <Link href="/verein" className="mt-3 block w-full rounded-lg bg-emerald-400 px-4 py-3 text-center text-sm font-semibold text-slate-950 transition hover:bg-emerald-300">Zur Vereinsgruppe →</Link>
+                : <button
+                    type="button"
+                    onClick={nextPuzzle}
+                    className="mt-3 w-full rounded-lg bg-emerald-400 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300"
+                  >
+                    Nächste Aufgabe →
+                  </button>
             )}
           </section>
 

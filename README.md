@@ -20,6 +20,10 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 Community, Profilbearbeitung, Avatare und Ranglisten benötigen die SQL-Migrationen in `supabase/migrations`. Verknüpfe das Supabase-Projekt mit der CLI (`supabase link --project-ref <project-ref>`) und führe `supabase db push` aus. Alternativ können alle noch nicht angewendeten Migrationsdateien der Reihe nach im Supabase SQL Editor ausgeführt werden. Ohne diese Migrationen funktionieren Suche, Chat, Profiländerungen und Ranglisten nicht.
 
+## Lizenz- und Herkunftshinweise
+
+Die in `lib/tactics-data.json` verwendeten Schachtaktik-Datensätze stammen aus der Lichess Open Database und stehen laut [Lichess-Datenbankhinweisen](https://database.lichess.org/) unter CC0. Die lokal bereitgestellte Stockfish.js-Engine in `public/stockfish/` steht unter GPLv3; Lizenztext und Versions-/Quellcodeangaben befinden sich neben den Dateien in `Copying.txt` und `README.txt`. Vor einer Weiterverteilung geänderter Engine-Dateien müssen die GPLv3-Pflichten, insbesondere zu Lizenzhinweisen und korrespondierendem Quellcode, eingehalten werden.
+
 ## Adminbereich und Moderation
 
 Die Adminoberfläche ist unter `/admin` verfügbar, nachdem `20261007000008_admin_moderation.sql` angewendet und ein Konto in `public.site_admins` eingetragen wurde. Die erste Owner-Rolle muss direkt im Supabase SQL Editor vergeben werden:
@@ -46,6 +50,8 @@ Supportanfragen unter `/support` verwenden zusätzlich die Migration `2026100700
 Der Menüpunkt `/tournaments` stellt private, angemeldeten Nutzern vorbehaltene Rundenturniere bereit. Dazu muss zusätzlich `20261007000010_tournaments.sql` nach den vorherigen Migrationen ausgeführt werden. Beide Teilnehmer müssen dasselbe Ergebnis melden; dann wird die Elo beider Spieler genau einmal über die normale Elo-Funktion im zur Zeitkontrolle passenden Modus (Bullet, Blitz, Rapid oder Klassisch) aktualisiert. Ergebnisse werden nicht automatisch vom Partie-Server geprüft.
 
 `20261007000011_account_improvements.sql` aktiviert Herausforderungen unter Freunden, private Blockierungen, kontoübergreifende Online-Partieverläufe und Support-Antwortbenachrichtigungen. Führe die Migration nach `20261007000010_tournaments.sql` aus. Blockieren entfernt auch eine bestehende Freundschaft; nach dem Entblocken muss eine Freundschaft neu angefragt werden.
+
+Der kostenlose Vereinsbereich unter `/verein` benötigt zusätzlich `20261009000000_chess_club_training.sql`, ausgeführt nach den bisherigen Migrationen. Er ermöglicht Vereine und Trainingsgruppen mit Einladungscodes, trainerseitig zugewiesene Taktikaufgaben, gemeinsame Pläne mit Fristen und Teamzielen, Teilnahmeübersichten und gruppeninterne Rundenturniere. Die Migration schützt die Vereinsdaten über RLS und zugriffsbeschränkte RPCs. Die Aufgabenlösung wird aktuell im Browser geprüft und ihr Ergebnis an die Datenbank gemeldet; diese Teilnahmeerfassung ist nicht manipulationssicher. Änderungen an der Datenbank werden nicht durch ein Vercel-Deployment angewendet: Verknüpfe das Supabase-Projekt und führe `supabase db push` aus oder wende die neue Migration im Supabase SQL Editor an.
 
 Das Taktiktraining bietet zusätzlich eine tägliche, für alle gleiche Aufgabe, Serien, Abzeichen und ein Monatsziel. Diese Lernfortschritte werden wie die bisherige Taktik-Elo lokal im Browser gespeichert und nicht zwischen Geräten synchronisiert. `/repertoire` enthält geführte Beispielvarianten; Profilstatistiken fassen die gewerteten Online-Partien nach Siegen, Remis, Niederlagen und Siegquote zusammen.
 
